@@ -122,7 +122,7 @@ enum SpaceSwitcherService {
             }
 
             // Check if space actually changed after a brief wait
-            try? await Task.sleep(for: .milliseconds(300))
+            try? await Task.sleep(for: .milliseconds(5))
             let newSpaces = getCurrentSpacePerDisplay()
             let newSpacesDesc = newSpaces.map { "\($0.key): \($0.value)" }.joined(separator: ", ")
             logger.info("Spaces after switch attempt: \(newSpacesDesc, privacy: .public)")
@@ -146,7 +146,7 @@ enum SpaceSwitcherService {
         logger.info("  Posting keyDown (keyCode=\(keyCode), flags=0x\(flagsHex, privacy: .public)) to .cghidEventTap")
         keyDown.post(tap: .cghidEventTap)
 
-        usleep(50_000) // 50ms
+        usleep(10_000) // 50ms
 
         keyUp.flags = flags
         logger.info("  Posting keyUp to .cghidEventTap")
