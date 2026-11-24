@@ -8,9 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		150EE3AF6ACAC8BD6530F32F /* SpaceDiff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51341432350BE0B352C726BD /* SpaceDiff.swift */; };
+		A0C0A0C0A0C0A0C0A0C0A0C0 /* AutomaticGroupLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C0B0C0B0C0B0C0B0C0B0C0 /* AutomaticGroupLayout.swift */; };
 		19F3467D5592246D46616000 /* SpaceSwitcherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1D73DA7B4FEB34EEA96877 /* SpaceSwitcherApp.swift */; };
 		220EDB97C2F63E902B56D087 /* SessionGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4156E7D6B9610662E040BC60 /* SessionGuard.swift */; };
-		276907AD7B4E1EB056C7784B /* DesktopGroupEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81701DEDA4E28B472C97E56B /* DesktopGroupEditorView.swift */; };
 		43258A596FDD206BF54E016D /* CGSPrivate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0731CEDE994E470A48867B5 /* CGSPrivate.swift */; };
 		43FFCE9B9289DE0F5D877FE7 /* OverlayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CBF89239D977C5E6018C9B /* OverlayManager.swift */; };
 		5BB65F734A1542B07661D155 /* SessionSafety.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7018D79B3F1D2EBD4861B6E /* SessionSafety.swift */; };
@@ -42,6 +42,7 @@
 /* Begin PBXFileReference section */
 		01BA33362420C9BC4093D0EC /* IconPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconPicker.swift; sourceTree = "<group>"; };
 		0FF639B0B298E449054AEC38 /* SpaceIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceIdentity.swift; sourceTree = "<group>"; };
+		B0C0B0C0B0C0B0C0B0C0B0C0 /* AutomaticGroupLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomaticGroupLayout.swift; sourceTree = "<group>"; };
 		12768B67B30930BCAEC78382 /* SpaceSwitcher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SpaceSwitcher.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1821E8BB46F8C5B39C68CF0B /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		1F1D73DA7B4FEB34EEA96877 /* SpaceSwitcherApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceSwitcherApp.swift; sourceTree = "<group>"; };
@@ -57,7 +58,6 @@
 		7263732107A87D03420C4606 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		77C5687B4F304DCC6BB373E4 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		7A83109240AF6FACCC850782 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		81701DEDA4E28B472C97E56B /* DesktopGroupEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopGroupEditorView.swift; sourceTree = "<group>"; };
 		877DBBE0B3AD2EB37C8682ED /* SpaceSwitcher.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SpaceSwitcher.entitlements; sourceTree = "<group>"; };
 		8C4BC5C2790911E5EE41FB19 /* NSScreen+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSScreen+Extensions.swift"; sourceTree = "<group>"; };
 		B5CBF89239D977C5E6018C9B /* OverlayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayManager.swift; sourceTree = "<group>"; };
@@ -88,7 +88,6 @@
 		07D36685FC00560A22F70562 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				81701DEDA4E28B472C97E56B /* DesktopGroupEditorView.swift */,
 				5E2D42A485F3BA53DB58580E /* HotkeySettingsView.swift */,
 				01BA33362420C9BC4093D0EC /* IconPicker.swift */,
 				F5FC4B141B8E046513571E6E /* MonitorMappingView.swift */,
@@ -101,6 +100,7 @@
 			isa = PBXGroup;
 			children = (
 				DD665D90874B51B299675F3D /* GestureFollower.swift */,
+				B0C0B0C0B0C0B0C0B0C0B0C0 /* AutomaticGroupLayout.swift */,
 				B7018D79B3F1D2EBD4861B6E /* SessionSafety.swift */,
 				51341432350BE0B352C726BD /* SpaceDiff.swift */,
 				0FF639B0B298E449054AEC38 /* SpaceIdentity.swift */,
@@ -283,8 +283,8 @@
 				DAE47A0D4E60CF56B97980B0 /* AppState.swift in Sources */,
 				43258A596FDD206BF54E016D /* CGSPrivate.swift in Sources */,
 				A616E75F65BC7F6598F5F83F /* DesktopGroup.swift in Sources */,
-				276907AD7B4E1EB056C7784B /* DesktopGroupEditorView.swift in Sources */,
 				6D08E9CD25E5FC0297268050 /* GestureFollower.swift in Sources */,
+				A0C0A0C0A0C0A0C0A0C0A0C0 /* AutomaticGroupLayout.swift in Sources */,
 				B4F5098928558C30AC9E0680 /* HotkeySettingsView.swift in Sources */,
 				6A511CA2AB59B4DB04BFA6D9 /* IconPicker.swift in Sources */,
 				78E316CD8F4D07D7B38D9384 /* KeyCodes.swift in Sources */,
