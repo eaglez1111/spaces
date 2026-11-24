@@ -35,10 +35,26 @@ enum ActivatedAppWindowLocator {
         // If the app has several windows, we can't infer which one AltTab selected.
         guard windowIDs.count == 1 else { return nil }
 
-        let ids = [NSNumber(value: windowIDs[0])] as CFArray
-        guard let rawSpaces = copySpacesForWindows(CGSMainConnectionID(), 0x7, ids)?.takeRetainedValue(),
-              let spaces = rawSpaces as? [NSNumber] else { return nil }
-        let uniqueSpaceIDs = Set(spaces.map(\.uint64Value).filter { $0 != 0 })
+        // Construct an actual CFArray; Swift's [NSNumber] to CFArray cast isn't portable.
+        let windowID = NSNumber(value: windowIDs[0])
+        var pointers: [UnsafeRawPointer?] = [
+            UnsafeRawPointer(Unmanaged.passUnretained(windowID).toOpaque())
+        ]
+        var callbacks = kCFTypeArrayCallBacks
+        guard let ids = pointers.withUnsafeMutableBufferPointer({ buffer in
+            CFArrayCreate(kCFAllocatorDefault, buffer.baseAddress, buffer.count, &callbacks)
+        }), let rawSpaces = copySpacesForWindows(CGSMainConnectionID(), 0x7, ids)?.takeRetainedValue()
+        else { return nil }
+
+        var uniqueSpaceIDs = Set<UInt64>()
+        for index in 0..<CFArrayGetCount(rawSpaces) {
+            guard let pointer = CFArrayGetValueAtIndex(rawSpaces, index) else { continue }
+            let number = Unmanaged<CFNumber>.fromOpaque(pointer).takeUnretainedValue()
+            var rawID: Int64 = 0
+            if CFNumberGetValue(number, .sInt64Type, &rawID), rawID > 0 {
+                uniqueSpaceIDs.insert(UInt64(rawID))
+            }
+        }
         guard uniqueSpaceIDs.count == 1 else { return nil }
         return uniqueSpaceIDs.first
     }
