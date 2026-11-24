@@ -15,6 +15,7 @@ extension Notification.Name {
     static let showSettings = Notification.Name("showSettings")
 }
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState = AppState()
     private var overlayManager: OverlayManager?

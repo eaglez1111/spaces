@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 
+@MainActor
 @Observable
 final class AppState {
     var groups: [DesktopGroup] = []
