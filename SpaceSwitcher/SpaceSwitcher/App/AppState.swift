@@ -11,8 +11,16 @@ final class AppState {
         didSet { UserDefaults.standard.set(followEnabled, forKey: "gestureFollowEnabled") }
     }
 
+    // Enabled by default, but independently switchable in Settings.
+    // Only activates for apps with exactly one normal window in one uniquely mapped group.
+    var followActivatedAppEnabled: Bool = (UserDefaults.standard.object(forKey: "followActivatedAppEnabled") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(followActivatedAppEnabled, forKey: "followActivatedAppEnabled") }
+    }
+
     private var follower = GestureFollower()
     private var lastCurrentSpaces: CurrentSpaces = [:]
+    private var lastSpaceChangeAt: TimeInterval = -10
+    private var activationSequence = 0
     // Do not misidentify synthetic group switches as user swipe gestures.
     private var ignoreFollowUntil: TimeInterval = 0
 
@@ -26,12 +34,20 @@ final class AppState {
             name: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil
         )
+        // Works with the native app switcher and AltTab; no AltTab integration required.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(applicationDidActivate(_:)),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
     }
 
     @objc private func spaceDidChange() {
         let old = lastCurrentSpaces
         let new = SpaceSwitcherService.getCurrentSpacePerDisplay()
         lastCurrentSpaces = new
+        lastSpaceChangeAt = ProcessInfo.processInfo.systemUptime
         refreshMonitors()
         guard ProcessInfo.processInfo.systemUptime >= ignoreFollowUntil else { return }
         detectActiveGroup()
@@ -46,6 +62,47 @@ final class AppState {
         let monitorsCopy = monitors
         Task { @MainActor in
             await SpaceSwitcherService.switchDisplays(requests, monitors: monitorsCopy)
+        }
+    }
+
+    /// When switching apps, follow a single window into its containing Space group.
+    /// We deliberately leave multi-window apps, sticky windows and ambiguous groups alone.
+    @objc private func applicationDidActivate(_ notification: Notification) {
+        activationSequence &+= 1
+        let request = activationSequence
+        guard followActivatedAppEnabled,
+              let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+              app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
+
+        let startedAt = ProcessInfo.processInfo.systemUptime
+        guard startedAt >= ignoreFollowUntil, startedAt - lastSpaceChangeAt >= 0.4 else { return }
+        let pid = app.processIdentifier
+
+        Task { @MainActor in
+            // AltTab activates the process first; give the app a moment to settle.
+            try? await Task.sleep(for: .milliseconds(120))
+            let now = ProcessInfo.processInfo.systemUptime
+            guard request == activationSequence,
+                  followActivatedAppEnabled,
+                  now >= ignoreFollowUntil,
+                  now - lastSpaceChangeAt >= 0.4,
+                  NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
+                  let windowSpaceID = ActivatedAppWindowLocator.spaceIDForSingleWindow(processID: pid)
+            else { return }
+
+            refreshMonitors()
+            detectActiveGroup()
+            let groupSpaces = groups.map { group in
+                monitors.compactMap { group.space(on: $0)?.spaceID }
+            }
+            let currentGroupIndex = groups.firstIndex { $0.id == activeGroupID }
+            guard let destination = ActivatedAppGroupResolver.destinationGroupIndex(
+                windowSpaceID: windowSpaceID,
+                groupSpaceIDs: groupSpaces,
+                currentGroupIndex: currentGroupIndex
+            ) else { return }
+
+            switchToGroup(groups[destination])
         }
     }
 

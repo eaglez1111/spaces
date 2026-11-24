@@ -60,6 +60,9 @@ struct GeneralSettingsView: View {
             LaunchAtLogin.Toggle("Launch at login")
             Toggle("Switch the whole group when a Space changes on one display (e.g. three-finger swipe)",
                    isOn: Binding(get: { appState.followEnabled }, set: { appState.followEnabled = $0 }))
+            Toggle("Follow activated apps with one window (AltTab / Cmd+Tab)",
+                   isOn: Binding(get: { appState.followActivatedAppEnabled },
+                                 set: { appState.followActivatedAppEnabled = $0 }))
         }
         .padding()
     }

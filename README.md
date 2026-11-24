@@ -129,3 +129,17 @@ and **Option + Space** continues to open the group overlay.
 
 The existing swipe-follow setting is independent of direct keyboard switching.
 After display reconnection, "Refresh Groups" is also available in the menu bar.
+
+
+### Follow activated apps (single-window mode)
+
+**Spaces → Settings → General → Follow activated apps with one window** enables automatic
+group switching for apps activated using AltTab or Command-Tab. When an activated
+app has exactly one ordinary window, the app reads its Space and switches the
+three-monitor group to the matching group. If the app has multiple normal windows,
+the window belongs to several Spaces, or the same Space is reused across multiple
+groups, it does nothing. This feature is independent of swipe-follow and can be
+disabled in Settings.
+
+Uses a read-only private SkyLight window-to-Space query; behavior may vary with
+macOS versions. Fullscreen-only and minimized windows are not guaranteed.

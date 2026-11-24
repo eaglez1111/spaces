@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        A7D56AB2D8FF4792AB4BAA11 /* ActivatedAppGroupResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D56AB2D8FF4792AB4BAA12 /* ActivatedAppGroupResolver.swift */; };
+        A7D56AB2D8FF4792AB4BAA13 /* ActivatedAppWindowLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D56AB2D8FF4792AB4BAA14 /* ActivatedAppWindowLocator.swift */; };
 		150EE3AF6ACAC8BD6530F32F /* SpaceDiff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51341432350BE0B352C726BD /* SpaceDiff.swift */; };
 		A0C0A0C0A0C0A0C0A0C0A0C0 /* AutomaticGroupLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C0B0C0B0C0B0C0B0C0B0C0 /* AutomaticGroupLayout.swift */; };
 		19F3467D5592246D46616000 /* SpaceSwitcherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1D73DA7B4FEB34EEA96877 /* SpaceSwitcherApp.swift */; };
@@ -40,6 +42,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+        A7D56AB2D8FF4792AB4BAA12 /* ActivatedAppGroupResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivatedAppGroupResolver.swift; sourceTree = "<group>"; };
+        A7D56AB2D8FF4792AB4BAA14 /* ActivatedAppWindowLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivatedAppWindowLocator.swift; sourceTree = "<group>"; };
 		01BA33362420C9BC4093D0EC /* IconPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconPicker.swift; sourceTree = "<group>"; };
 		0FF639B0B298E449054AEC38 /* SpaceIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceIdentity.swift; sourceTree = "<group>"; };
 		B0C0B0C0B0C0B0C0B0C0B0C0 /* AutomaticGroupLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomaticGroupLayout.swift; sourceTree = "<group>"; };
@@ -101,6 +105,7 @@
 			children = (
 				DD665D90874B51B299675F3D /* GestureFollower.swift */,
 				B0C0B0C0B0C0B0C0B0C0B0C0 /* AutomaticGroupLayout.swift */,
+				A7D56AB2D8FF4792AB4BAA12 /* ActivatedAppGroupResolver.swift */,
 				B7018D79B3F1D2EBD4861B6E /* SessionSafety.swift */,
 				51341432350BE0B352C726BD /* SpaceDiff.swift */,
 				0FF639B0B298E449054AEC38 /* SpaceIdentity.swift */,
@@ -188,6 +193,7 @@
 				36173B1161C148BCD0DE9910 /* PersistenceManager.swift */,
 				4156E7D6B9610662E040BC60 /* SessionGuard.swift */,
 				B99E961A805224DAE6EC4908 /* SpaceSwitcherService.swift */,
+				A7D56AB2D8FF4792AB4BAA14 /* ActivatedAppWindowLocator.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -285,6 +291,8 @@
 				A616E75F65BC7F6598F5F83F /* DesktopGroup.swift in Sources */,
 				6D08E9CD25E5FC0297268050 /* GestureFollower.swift in Sources */,
 				A0C0A0C0A0C0A0C0A0C0A0C0 /* AutomaticGroupLayout.swift in Sources */,
+				A7D56AB2D8FF4792AB4BAA11 /* ActivatedAppGroupResolver.swift in Sources */,
+				A7D56AB2D8FF4792AB4BAA13 /* ActivatedAppWindowLocator.swift in Sources */,
 				B4F5098928558C30AC9E0680 /* HotkeySettingsView.swift in Sources */,
 				6A511CA2AB59B4DB04BFA6D9 /* IconPicker.swift in Sources */,
 				78E316CD8F4D07D7B38D9384 /* KeyCodes.swift in Sources */,
