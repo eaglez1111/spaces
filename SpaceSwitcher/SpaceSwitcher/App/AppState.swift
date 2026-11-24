@@ -6,29 +6,20 @@ final class AppState {
     var groups: [DesktopGroup] = []
     var monitors: [MonitorInfo] = []
     var activeGroupID: UUID?
-    var pendingSelectGroupID: UUID?
 
-    /// When on, changing the Space on one display by any native means (e.g. three-finger swipe) moves the
-    /// other displays to the same group's Spaces. Off by default.
     var followEnabled: Bool = UserDefaults.standard.bool(forKey: "gestureFollowEnabled") {
         didSet { UserDefaults.standard.set(followEnabled, forKey: "gestureFollowEnabled") }
     }
 
     private var follower = GestureFollower()
     private var lastCurrentSpaces: CurrentSpaces = [:]
-    private let persistence = PersistenceManager()
+    // Do not misidentify synthetic group switches as user swipe gestures.
+    private var ignoreFollowUntil: TimeInterval = 0
 
     init() {
-        // Older saved groups first go global-desktop-number -> per-monitor index (PersistenceManager),
-        // then per-monitor index -> Space UUID keys (refreshMonitors).
-        monitors = MonitorManager.detectMonitors()
-        persistence.migrateToPerMonitorIndicesIfNeeded(monitors: monitors)
-        groups = persistence.loadGroups()
         refreshMonitors()
         lastCurrentSpaces = SpaceSwitcherService.getCurrentSpacePerDisplay()
         detectActiveGroup()
-
-        // Re-detect active group whenever the user switches spaces (e.g. via Mission Control)
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
             selector: #selector(spaceDidChange),
@@ -42,6 +33,7 @@ final class AppState {
         let new = SpaceSwitcherService.getCurrentSpacePerDisplay()
         lastCurrentSpaces = new
         refreshMonitors()
+        guard ProcessInfo.processInfo.systemUptime >= ignoreFollowUntil else { return }
         detectActiveGroup()
 
         guard followEnabled else { return }
@@ -57,93 +49,79 @@ final class AppState {
         }
     }
 
-    /// Resolve saved groups (display UUID -> Space key) to concrete display UUID -> current Space ID.
     private func followGroups() -> [FollowGroup] {
         groups.compactMap { group in
             var targets: [String: UInt64] = [:]
             for monitor in monitors {
-                if let space = group.space(on: monitor) { targets[monitor.displayUUID] = space.spaceID }
+                if let space = group.space(on: monitor) {
+                    targets[monitor.displayUUID] = space.spaceID
+                }
             }
             return targets.isEmpty ? nil : FollowGroup(id: group.id, targets: targets)
         }
     }
 
+    /// Always rebuild the groups from native, per-monitor Desktop order.
+    /// Groups do not need to be saved or manually maintained.
     func refreshMonitors() {
         monitors = MonitorManager.detectMonitors()
-        migrateLegacyGroups()
-    }
+        let positions = AutomaticGroupLayout.indices(forSpaceCounts: monitors.map(\.spaces.count))
+        let existing = groups
 
-    /// Convert legacy (monitor label + index) group entries to Space-UUID keys for monitors that are connected now.
-    /// Groups keyed by UUID need no reconciliation when Spaces are added, removed, reordered or re-created.
-    private func migrateLegacyGroups() {
-        let legacyMonitors = monitors.map {
-            LegacyMonitor(label: $0.id, displayUUID: $0.displayUUID,
-                          spaces: $0.spaces.map { SpaceRef(id: $0.spaceID, uuid: $0.uuid) })
+        groups = positions.enumerated().map { groupIndex, indices in
+            let id = groupIndex < existing.count ? existing[groupIndex].id : UUID()
+            var group = DesktopGroup(id: id, name: "Group \(groupIndex + 1)", icon: "Labtop")
+            for (monitorIndex, spaceIndex) in indices.enumerated() {
+                if let spaceIndex {
+                    group.setSpaceIndex(spaceIndex, on: monitors[monitorIndex])
+                }
+            }
+            return group
         }
-        var anyChanged = false
-        for i in groups.indices where !groups[i].monitorSpaces.isEmpty {
-            let r = LegacyMigration.migrate(legacy: groups[i].monitorSpaces,
-                                            displaySpaces: groups[i].displaySpaces,
-                                            monitors: legacyMonitors)
-            guard r.changed else { continue }
-            groups[i].displaySpaces = r.displaySpaces
-            groups[i].monitorSpaces = r.legacy
-            anyChanged = true
+        if let activeGroupID, !groups.contains(where: { $0.id == activeGroupID }) {
+            self.activeGroupID = nil
         }
-        if anyChanged { saveGroups() }
     }
 
-    func saveGroups() {
-        persistence.saveGroups(groups)
-    }
-
-    func addGroup(_ group: DesktopGroup) {
-        groups.append(group)
-        saveGroups()
-    }
-
-    func deleteGroup(_ group: DesktopGroup) {
-        groups.removeAll { $0.id == group.id }
-        saveGroups()
-    }
-
-    func updateGroup(_ group: DesktopGroup) {
-        if let idx = groups.firstIndex(where: { $0.id == group.id }) {
-            groups[idx] = group
-            saveGroups()
+    func cycleGroup(by offset: Int) {
+        refreshMonitors()
+        // During an in-flight switch, retain the requested group so rapid keypresses cycle reliably.
+        if ProcessInfo.processInfo.systemUptime >= ignoreFollowUntil {
+            detectActiveGroup()
         }
+        let currentIndex = groups.firstIndex(where: { $0.id == activeGroupID })
+        guard let nextIndex = AutomaticGroupLayout.cycledIndex(
+            current: currentIndex, offset: offset, count: groups.count
+        ) else { return }
+        switchToGroup(groups[nextIndex])
     }
 
     func switchToGroup(_ group: DesktopGroup) {
-        activeGroupID = group.id
-        let groupCopy = group
+        refreshMonitors()
+        guard let target = groups.first(where: { $0.id == group.id }) else { return }
+        activeGroupID = target.id
+        ignoreFollowUntil = ProcessInfo.processInfo.systemUptime + 1.5
         let monitorsCopy = monitors
         Task { @MainActor in
-            await SpaceSwitcherService.switchToGroup(groupCopy, monitors: monitorsCopy)
+            await SpaceSwitcherService.switchToGroup(target, monitors: monitorsCopy)
         }
     }
 
-    /// Detect which group (if any) matches the currently active spaces on all monitors.
     func detectActiveGroup() {
         let currentSpaces = SpaceSwitcherService.getCurrentSpacePerDisplay()
-
         for group in groups {
             let allMatch = monitors.allSatisfy { monitor in
-                guard let spaceInfo = group.space(on: monitor),
-                      let currentSpaceID = currentSpaces[monitor.displayUUID]
-                else {
-                    // If the group doesn't define a space for this monitor, skip it
+                guard let space = group.space(on: monitor),
+                      let currentID = currentSpaces[monitor.displayUUID] else {
                     return !group.hasSpace(on: monitor)
                 }
-                return spaceInfo.spaceID == currentSpaceID
+                return space.spaceID == currentID
             }
-
             if allMatch {
                 activeGroupID = group.id
                 return
             }
         }
-
         activeGroupID = nil
     }
 }

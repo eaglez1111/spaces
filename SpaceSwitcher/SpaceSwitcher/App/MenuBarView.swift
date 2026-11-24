@@ -27,8 +27,9 @@ struct MenuBarView: View {
             Divider()
         }
 
-        Button("New Group\u{2026}") {
-            addGroupFromMenu()
+        Button("Refresh Groups") {
+            appState.refreshMonitors()
+            appState.detectActiveGroup()
         }
 
         Button("Settings\u{2026}") {
@@ -44,17 +45,4 @@ struct MenuBarView: View {
         .keyboardShortcut("q")
     }
 
-    private func addGroupFromMenu() {
-        let currentSpaces = SpaceSwitcherService.getCurrentSpacePerDisplay()
-        let displaySpaces = DesktopGroup.displaySpacesForCurrent(monitors: appState.monitors, currentSpaces: currentSpaces)
-
-        let appearance = DesktopGroup.randomAppearance()
-        let newGroup = DesktopGroup(name: "New Group", icon: appearance.icon,
-                                    colorName: appearance.color, displaySpaces: displaySpaces)
-        appState.addGroup(newGroup)
-        appState.pendingSelectGroupID = newGroup.id
-
-        openSettings()
-        NotificationCenter.default.post(name: .showSettings, object: nil)
-    }
 }

@@ -146,7 +146,7 @@ enum SpaceSwitcherService {
         logger.info("  Posting keyDown (keyCode=\(keyCode), flags=0x\(flagsHex, privacy: .public)) to .cghidEventTap")
         keyDown.post(tap: .cghidEventTap)
 
-        usleep(10_000) // 50ms
+        usleep(10_000) // 10ms
 
         keyUp.flags = flags
         logger.info("  Posting keyUp to .cghidEventTap")

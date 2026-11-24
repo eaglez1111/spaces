@@ -3,6 +3,11 @@ import KeyboardShortcuts
 
 extension KeyboardShortcuts.Name {
     static let toggleOverlay = Self("toggleOverlay", default: .init(.space, modifiers: .option))
+    // Ctrl+arrows are intercepted by macOS unless Mission Control bindings are disabled.
+    static let previousGroup = Self("previousGroup", default: .init(.leftArrow, modifiers: .control))
+    static let nextGroup = Self("nextGroup", default: .init(.rightArrow, modifiers: .control))
+    // Optional: assign Option+Tab from Settings to cycle groups without an overlay.
+    static let cycleGroup = Self("cycleGroup")
 }
 
 extension Notification.Name {
@@ -26,6 +31,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in
                 self?.overlayManager?.toggle()
             }
+        }
+
+        // Globally switch group directly. The action wraps at the ends.
+        KeyboardShortcuts.onKeyUp(for: .previousGroup) { [weak self] in
+            Task { @MainActor in self?.appState.cycleGroup(by: -1) }
+        }
+        KeyboardShortcuts.onKeyUp(for: .nextGroup) { [weak self] in
+            Task { @MainActor in self?.appState.cycleGroup(by: 1) }
+        }
+        KeyboardShortcuts.onKeyUp(for: .cycleGroup) { [weak self] in
+            Task { @MainActor in self?.appState.cycleGroup(by: 1) }
         }
 
         // Listen for "Show Switcher" from menu bar
@@ -103,5 +119,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func screensChanged() {
         appState.refreshMonitors()
+        appState.detectActiveGroup()
     }
 }

@@ -112,3 +112,20 @@ MIT
 ## Developer tools
 
 `tools/probes/` holds small standalone programs used to investigate macOS behavior. They are not part of the app or any build.
+
+
+### Automatic, synchronized Space groups (this fork)
+
+Groups are generated using each display's native Desktop **position**. Group 1 picks the
+first Desktop on each display, group 2 the second, and so on. When a monitor has
+fewer Desktops, later groups keep that monitor on its last available Desktop.
+Changes to display/Space configurations automatically update the mapping.
+
+**Control + Left/Right** switch to the previous/next group with wraparound.
+Disable macOS's competing shortcuts in **System Settings → Keyboard → Keyboard
+Shortcuts → Mission Control → Move left a space / Move right a space** first.
+**Option + Tab** can optionally be assigned to "Cycle Groups" in Settings → General,
+and **Option + Space** continues to open the group overlay.
+
+The existing swipe-follow setting is independent of direct keyboard switching.
+After display reconnection, "Refresh Groups" is also available in the menu bar.
