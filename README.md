@@ -39,34 +39,25 @@ This builds the app and installs it to `/Applications/Spaces.app`. Launch Spaces
 
 **No prebuilt binaries are published for this project; build it from source.** See [DEVELOPMENT.md](DEVELOPMENT.md) for build and test details.
 
-### Stable signing and one-time permission cleanup
+### Simple installation and macOS permissions
 
-The installer now checks for a reusable signing identity **before** stopping or
-replacing the installed app. It uses a single production bundle identity,
-`com.spaceswitcher.Spaces`. The Xcode target builds `Spaces.app` directly; it no longer creates
-a separate `SpaceSwitcher.app` identity.
+On any Mac with Xcode installed, run `git pull`, then `./install.sh` from
+the `SpaceSwitcher` source directory, and launch `/Applications/Spaces.app`.
+The installer builds a single `Spaces.app` with the existing
+`com.spaceswitcher.Spaces` bundle ID. No certificate or per-computer signing
+setup is required.
 
-To avoid repeated macOS Accessibility reapproval, create a code-signing
-certificate **once** using Keychain Access → Certificate Assistant → Create a
-Certificate (name `Spaces Local Signing`, identity type **Self Signed Root**,
-certificate type **Code Signing**). Keep it in your login keychain and configure
-it to be trusted for Code Signing. An existing Apple Development or Developer
-ID Application identity also works; select it explicitly with
+Local builds use ad-hoc signing by default. Because the signature can change
+when the code changes, macOS may require Accessibility reapproval after updates.
+Settings displays whether the running app currently has Accessibility access.
+If you already maintain a reusable signing identity, it is optional:
 `SPACES_SIGNING_IDENTITY="certificate name or SHA-1" ./install.sh`.
 
-Without a stable identity, `./install.sh` stops without changing the installed
-app; use `SPACES_ALLOW_ADHOC=1 ./install.sh` only if you accept repeated
-permission prompts. If switching away from a previous ad-hoc signature, remove
-the old **Spaces** entry in macOS Privacy & Security → Accessibility, re-add the
-installed `/Applications/Spaces.app`, approve it, and relaunch Spaces once.
-
-An old **SpaceSwitcher** permission entry comes from an earlier development
-build. Remove it manually with the minus button under Accessibility and, if
-present, Input Monitoring. Remove any separate old `SpaceSwitcher.app` from
-Applications using Finder. Keep the source directory named `SpaceSwitcher`:
-it contains the Xcode project and is not another installed app.
-The sole app target, executable and bundle identity are now `Spaces`.
-The installer never modifies macOS privacy approvals or resets TCC data.
+If you have a leftover `SpaceSwitcher` entry from an older development build,
+you can remove it once under macOS Accessibility and Input Monitoring. Remove
+any separate old `SpaceSwitcher.app` from Applications using Finder. The
+`SpaceSwitcher` source-code directory is not a second installed application.
+The installer never resets macOS privacy approvals.
 
 ### Grant Accessibility access
 
