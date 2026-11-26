@@ -224,15 +224,17 @@ final class AppState {
         switchToGroup(groups[nextIndex])
     }
 
-    func switchToGroup(_ group: DesktopGroup) {
+    /// Returns the in-flight operation so the app picker can wait until
+    /// every monitor has completed its Space transition before focusing a window.
+    @discardableResult
+    func switchToGroup(_ group: DesktopGroup) -> Task<Void, Never>? {
         refreshMonitors()
-        guard let target = groups.first(where: { $0.id == group.id }) else { return }
+        guard let target = groups.first(where: { $0.id == group.id }) else { return nil }
         activeGroupID = target.id
-        // Allow the full multi-monitor transition to finish without treating
-        // synthetic Space changes as a user swipe.
+        // Ignore synthetic Space changes while the monitors animate/retry.
         ignoreFollowUntil = ProcessInfo.processInfo.systemUptime + 5.0
         let monitorsCopy = monitors
-        Task { @MainActor in
+        return Task { @MainActor in
             await SpaceSwitcherService.switchToGroup(target, monitors: monitorsCopy)
             if self.activeGroupID == target.id {
                 self.ignoreFollowUntil = ProcessInfo.processInfo.systemUptime + 0.55
