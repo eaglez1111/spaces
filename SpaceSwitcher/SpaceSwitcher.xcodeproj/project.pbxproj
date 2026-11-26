@@ -55,7 +55,7 @@
 		01BA33362420C9BC4093D0EC /* IconPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconPicker.swift; sourceTree = "<group>"; };
 		0FF639B0B298E449054AEC38 /* SpaceIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceIdentity.swift; sourceTree = "<group>"; };
 		B0C0B0C0B0C0B0C0B0C0B0C0 /* AutomaticGroupLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomaticGroupLayout.swift; sourceTree = "<group>"; };
-		12768B67B30930BCAEC78382 /* SpaceSwitcher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SpaceSwitcher.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		12768B67B30930BCAEC78382 /* Spaces.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Spaces.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1821E8BB46F8C5B39C68CF0B /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		1F1D73DA7B4FEB34EEA96877 /* SpaceSwitcherApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceSwitcherApp.swift; sourceTree = "<group>"; };
 		36173B1161C148BCD0DE9910 /* PersistenceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceManager.swift; sourceTree = "<group>"; };
@@ -153,7 +153,7 @@
 		987761FA91B48584DF52A0A3 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				12768B67B30930BCAEC78382 /* SpaceSwitcher.app */,
+				12768B67B30930BCAEC78382 /* Spaces.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -219,9 +219,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		986CDBC62A20424E843AE628 /* SpaceSwitcher */ = {
+		986CDBC62A20424E843AE628 /* Spaces */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F57C1CFD4A230E48C15F2A82 /* Build configuration list for PBXNativeTarget "SpaceSwitcher" */;
+			buildConfigurationList = F57C1CFD4A230E48C15F2A82 /* Build configuration list for PBXNativeTarget "Spaces" */;
 			buildPhases = (
 				5E3545D7814B4726D7BFF9A8 /* Sources */,
 				688ED00EAA7549A8F347A1EC /* Resources */,
@@ -231,13 +231,13 @@
 			);
 			dependencies = (
 			);
-			name = SpaceSwitcher;
+			name = Spaces;
 			packageProductDependencies = (
 				D63285519C3081DAFCA6A9F0 /* KeyboardShortcuts */,
 				7EE5FE12DA3AB8BE495CB7D9 /* LaunchAtLogin */,
 			);
-			productName = SpaceSwitcher;
-			productReference = 12768B67B30930BCAEC78382 /* SpaceSwitcher.app */;
+			productName = Spaces;
+			productReference = 12768B67B30930BCAEC78382 /* Spaces.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -272,7 +272,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				986CDBC62A20424E843AE628 /* SpaceSwitcher */,
+				986CDBC62A20424E843AE628 /* Spaces */,
 			);
 		};
 /* End PBXProject section */
@@ -349,8 +349,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.spaceswitcher.SpaceSwitcher;
-				PRODUCT_NAME = SpaceSwitcher;
+				PRODUCT_BUNDLE_IDENTIFIER = com.spaceswitcher.Spaces;
+				PRODUCT_NAME = Spaces;
 				SDKROOT = macosx;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -495,8 +495,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.spaceswitcher.SpaceSwitcher;
-				PRODUCT_NAME = SpaceSwitcher;
+				PRODUCT_BUNDLE_IDENTIFIER = com.spaceswitcher.Spaces;
+				PRODUCT_NAME = Spaces;
 				SDKROOT = macosx;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -516,7 +516,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		F57C1CFD4A230E48C15F2A82 /* Build configuration list for PBXNativeTarget "SpaceSwitcher" */ = {
+		F57C1CFD4A230E48C15F2A82 /* Build configuration list for PBXNativeTarget "Spaces" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1352D924ACD0390C4EAAAEB6 /* Debug */,

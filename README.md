@@ -43,8 +43,8 @@ This builds the app and installs it to `/Applications/Spaces.app`. Launch Spaces
 
 The installer now checks for a reusable signing identity **before** stopping or
 replacing the installed app. It uses a single production bundle identity,
-`com.spaceswitcher.Spaces`. The intermediate development app is built unsigned
-and is not launched or authorized by the installer.
+`com.spaceswitcher.Spaces`. The Xcode target builds `Spaces.app` directly; it no longer creates
+a separate `SpaceSwitcher.app` identity.
 
 To avoid repeated macOS Accessibility reapproval, create a code-signing
 certificate **once** using Keychain Access → Certificate Assistant → Create a
@@ -61,8 +61,12 @@ the old **Spaces** entry in macOS Privacy & Security → Accessibility, re-add t
 installed `/Applications/Spaces.app`, approve it, and relaunch Spaces once.
 
 An old **SpaceSwitcher** permission entry comes from an earlier development
-build and can be removed manually with the minus button. No installer should
-silently modify macOS privacy approvals or reset TCC data.
+build. Remove it manually with the minus button under Accessibility and, if
+present, Input Monitoring. Remove any separate old `SpaceSwitcher.app` from
+Applications using Finder. Keep the source directory named `SpaceSwitcher`:
+it contains the Xcode project and is not another installed app.
+The sole app target, executable and bundle identity are now `Spaces`.
+The installer never modifies macOS privacy approvals or resets TCC data.
 
 ### Grant Accessibility access
 
