@@ -488,16 +488,19 @@ final class AppGroupSwitcherController {
     private func select(_ entry: AppGroupEntry) {
         dismiss()
         let currentlyActive = appState.activeGroupID == entry.groupID
+        var switchTask: Task<Void, Never>?
         if !currentlyActive,
            let target = appState.groups.first(where: { $0.id == entry.groupID }) {
-            appState.switchToGroup(target)
+            switchTask = appState.switchToGroup(target)
         }
 
         selectionGeneration += 1
         let generation = selectionGeneration
         Task { @MainActor in
-            if !currentlyActive {
-                try? await Task.sleep(for: .milliseconds(320))
+            // Wait for verified desktop switching (including retries). A fixed
+            // 320ms delay can raise the window before one display changes.
+            if let switchTask {
+                await switchTask.value
             }
             guard generation == selectionGeneration else { return }
             AppGroupWindowFocus.raise(entry)
