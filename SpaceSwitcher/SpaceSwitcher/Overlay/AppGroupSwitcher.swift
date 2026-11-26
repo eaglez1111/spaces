@@ -296,7 +296,14 @@ final class AppGroupSwitcherController {
         let window = OverlayPanel(contentRect: NSRect(origin: .zero, size: size))
         window.contentView = hosting
         window.setContentSize(size)
-        let screen = NSScreen.main ?? NSScreen.screens.first
+        // Keep Cmd+Tab on the monitor chosen for the Dock, even when another
+        // display currently has keyboard focus. Fall back if it is unplugged.
+        let dockDisplayID = appState.monitors.first {
+            $0.displayUUID == appState.dockLockDisplayUUID
+        }?.displayID
+        let screen = NSScreen.screens.first { $0.displayID == dockDisplayID }
+            ?? NSScreen.screens.first
+            ?? NSScreen.main
         if let frame = screen?.visibleFrame {
             window.setFrameOrigin(NSPoint(
                 x: frame.midX - size.width / 2,
