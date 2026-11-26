@@ -168,10 +168,9 @@ from DockPin (MIT license, Copyright 2026 Meti Kadriu, see THIRD_PARTY_NOTICES.m
 ### Cross-Space app picker (opt-in Cmd+Tab replacement)
 
 **Cmd+Tab** can open a custom cross-Space app switcher. This replaces the native
-app switcher only while the user enables it in Settings → General. It is OFF
-every time the application launches, so a system freeze cannot persist across
-restarts. macOS Cmd+Tab is restored whenever the toggle is switched off or the
-app quits normally. A separate Option+Shift+Tab shortcut can preview the same
+app switcher only while the user enables it in Settings → General. The enabled/disabled preference now persists across launches. macOS Cmd+Tab
+is restored whenever the toggle is switched off or the app quits normally;
+if the keyboard event tap cannot start, the Settings status explains why. A separate Option+Shift+Tab shortcut can preview the same
 picker without taking over the native Cmd+Tab behavior.
 
 The overlay shows one horizontal row per automatic Space group: the first
@@ -186,7 +185,8 @@ no expensive queries occur inside the system keyboard event-tap callback.
 The window inventory uses a read-only private SkyLight API, so protected,
 minimized, or unusual windows can be missing.
 
-**Dock lock**, separately enabled in Settings, is likewise off every launch.
+**Dock lock**, separately enabled in Settings, remembers its checked state and
+selected monitor across launches.
 It needs Accessibility permission and a bottom-positioned Dock. It may prevent
 Dock migration when the mouse reaches another monitor's bottom edge. If its
 mouse tap times out it stays disabled instead of re-enabling itself.
@@ -216,5 +216,7 @@ independently configurable.
 After the previous system freeze, the installer stops the actual
 `SpaceSwitcher` executable before replacing `/Applications/Spaces.app`.
 It no longer restarts Dock, resets Accessibility permissions, or automatically
-launches the updated app. The two input-interception options start disabled on every application
-launch, until explicitly enabled for that session.
+launches the updated app. Settings persist in a stable preferences domain.
+The input-interception options are off on a fresh installation, but remember
+explicit choices on subsequent launches. The Custom Cmd+Tab status distinguishes
+a hook being armed from actual key interception.
