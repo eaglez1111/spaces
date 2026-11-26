@@ -1,4 +1,6 @@
 import AppKit
+import Darwin
+import Dispatch
 import KeyboardShortcuts
 import LaunchAtLogin
 
