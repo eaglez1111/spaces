@@ -143,3 +143,25 @@ disabled in Settings.
 
 Uses a read-only private SkyLight window-to-Space query; behavior may vary with
 macOS versions. Fullscreen-only and minimized windows are not guaranteed.
+
+
+### Bottom Dock lock (this fork)
+
+Spaces → Settings → General includes **Keep Dock at bottom of one monitor** and a
+**Dock monitor** selector. The feature is off by default; enable it only after
+moving your existing macOS Dock to the preferred monitor. Once enabled, the
+Dock stays on that monitor when you move the pointer to the bottom of another
+screen. Hold **Option** to bypass the guard temporarily when you want to move
+the Dock yourself.
+
+Implementation: a low-overhead CGEventTap on pointer movement and drags, with
+a small boundary guard on the *exposed* bottom edges of non-selected monitors.
+The shared edge between vertically stacked monitors is intentionally not
+guarded, so pointer travel between displays remains possible. No Dock restart,
+private API, or system preference change is needed. The feature uses Spaces'
+existing Accessibility permission. It pauses if the selected display is
+disconnected, the Dock is not at the bottom, or there is only one monitor.
+
+The Dock lock does **not** forcibly move a Dock that's already on the wrong
+screen; place it first, then enable the toggle. Source technique adapted
+from DockPin (MIT license, Copyright 2026 Meti Kadriu, see THIRD_PARTY_NOTICES.md).

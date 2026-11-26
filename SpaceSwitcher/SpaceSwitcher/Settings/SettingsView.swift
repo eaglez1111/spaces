@@ -11,7 +11,7 @@ struct SettingsView: View {
             GeneralSettingsView()
                 .tabItem { Label("General", systemImage: "gear") }
         }
-        .frame(width: 580, height: 400)
+        .frame(width: 640, height: 510)
         .onAppear {
             appState.refreshMonitors()
             appState.detectActiveGroup()
@@ -63,6 +63,24 @@ struct GeneralSettingsView: View {
             Toggle("Follow activated apps with one window (AltTab / Cmd+Tab)",
                    isOn: Binding(get: { appState.followActivatedAppEnabled },
                                  set: { appState.followActivatedAppEnabled = $0 }))
+
+            Divider()
+            Toggle("Keep Dock at bottom of one monitor",
+                   isOn: Binding(get: { appState.dockLockEnabled },
+                                 set: { appState.dockLockEnabled = $0 }))
+            Picker("Dock monitor", selection: Binding(
+                get: { appState.dockLockDisplayUUID },
+                set: { appState.dockLockDisplayUUID = $0 }
+            )) {
+                ForEach(appState.monitors.filter { !$0.displayUUID.isEmpty }) { monitor in
+                    Text("\(monitor.label) (\(Int(monitor.frame.width))×\(Int(monitor.frame.height)))")
+                        .tag(monitor.displayUUID)
+                }
+            }
+            Text("Dock lock: \(appState.dockLockStatus). Place the Dock on your chosen monitor before enabling. Hold Option to temporarily bypass.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("Refresh Dock lock") { appState.refreshDockLock() }
         }
         .padding()
     }

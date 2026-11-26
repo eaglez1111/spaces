@@ -121,5 +121,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func screensChanged() {
         appState.refreshMonitors()
         appState.detectActiveGroup()
+        appState.refreshDockLock()
     }
 }

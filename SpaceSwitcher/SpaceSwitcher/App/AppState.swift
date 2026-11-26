@@ -18,6 +18,22 @@ final class AppState {
         didSet { UserDefaults.standard.set(followActivatedAppEnabled, forKey: "followActivatedAppEnabled") }
     }
 
+    // Dock lock is opt-in. An empty selection is initialized to the main display.
+    var dockLockEnabled: Bool = UserDefaults.standard.bool(forKey: "dockLockEnabled") {
+        didSet {
+            UserDefaults.standard.set(dockLockEnabled, forKey: "dockLockEnabled")
+            refreshDockLock()
+        }
+    }
+    var dockLockDisplayUUID: String = UserDefaults.standard.string(forKey: "dockLockDisplayUUID") ?? "" {
+        didSet {
+            UserDefaults.standard.set(dockLockDisplayUUID, forKey: "dockLockDisplayUUID")
+            refreshDockLock()
+        }
+    }
+    var dockLockStatus: String = "Off"
+    private let dockEdgeGuard = DockEdgeGuard()
+
     private var follower = GestureFollower()
     private var lastCurrentSpaces: CurrentSpaces = [:]
     private var lastSpaceChangeAt: TimeInterval = -10
@@ -27,6 +43,13 @@ final class AppState {
 
     init() {
         refreshMonitors()
+        // Use the primary display until the user chooses a different monitor.
+        if dockLockDisplayUUID.isEmpty {
+            dockLockDisplayUUID = monitors.first(where: {
+                $0.displayID == NSScreen.screens.first?.displayID
+            })?.displayUUID ?? monitors.first?.displayUUID ?? ""
+        }
+        refreshDockLock()
         lastCurrentSpaces = SpaceSwitcherService.getCurrentSpacePerDisplay()
         detectActiveGroup()
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -139,6 +162,13 @@ final class AppState {
         if let activeGroupID, !groups.contains(where: { $0.id == activeGroupID }) {
             self.activeGroupID = nil
         }
+    }
+
+    /// Update the guard after a monitor reconnect or when the selection changes.
+    func refreshDockLock() {
+        dockLockStatus = dockEdgeGuard.configure(
+            enabled: dockLockEnabled, selectedDisplayUUID: dockLockDisplayUUID
+        )
     }
 
     func cycleGroup(by offset: Int) {
