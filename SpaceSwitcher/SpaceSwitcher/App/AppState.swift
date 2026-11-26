@@ -1,6 +1,26 @@
 import AppKit
 import SwiftUI
 
+/// Stable settings domain independent of whether Xcode launched
+/// SpaceSwitcher.app or the installer launched the re-signed Spaces.app.
+private enum SpacesPreferences {
+    static let store = UserDefaults(suiteName: "com.spaceswitcher.Spaces") ?? .standard
+
+    static func bool(_ key: String, legacy: String? = nil, fallback: Bool) -> Bool {
+        if let value = store.object(forKey: key) as? Bool { return value }
+        if let old = legacy,
+           let value = store.object(forKey: old) as? Bool { return value }
+        if let value = UserDefaults.standard.object(forKey: key) as? Bool { return value }
+        if let old = legacy,
+           let value = UserDefaults.standard.object(forKey: old) as? Bool { return value }
+        return fallback
+    }
+
+    static func string(_ key: String) -> String? {
+        store.string(forKey: key) ?? UserDefaults.standard.string(forKey: key)
+    }
+}
+
 @MainActor
 @Observable
 final class AppState {
@@ -8,35 +28,44 @@ final class AppState {
     var monitors: [MonitorInfo] = []
     var activeGroupID: UUID?
 
-    var followEnabled: Bool = (UserDefaults.standard.object(forKey: "gestureFollowEnabled") as? Bool) ?? true {
-        didSet { UserDefaults.standard.set(followEnabled, forKey: "gestureFollowEnabled") }
+    var followEnabled: Bool = SpacesPreferences.bool("gestureFollowEnabled", fallback: true) {
+        didSet { SpacesPreferences.store.set(followEnabled, forKey: "gestureFollowEnabled") }
     }
 
     // Enabled by default, but independently switchable in Settings.
     // Only activates for apps with exactly one normal window in one uniquely mapped group.
-    var followActivatedAppEnabled: Bool = (UserDefaults.standard.object(forKey: "followActivatedAppEnabled") as? Bool) ?? true {
-        didSet { UserDefaults.standard.set(followActivatedAppEnabled, forKey: "followActivatedAppEnabled") }
+    var followActivatedAppEnabled: Bool = SpacesPreferences.bool("followActivatedAppEnabled", fallback: true) {
+        didSet { SpacesPreferences.store.set(followActivatedAppEnabled, forKey: "followActivatedAppEnabled") }
     }
 
-    // Session-only safety controls. Existing saved preferences are intentionally
-    // ignored, so a crash/reboot cannot automatically reinstate input interception.
-    var appPickerEnabled: Bool = false
-    var replaceCommandTab: Bool = false {
+    // User choices persist across relaunches, including re-signed installs.
+    // Defaults remain conservative for input-hook features after the earlier freezes.
+    var appPickerEnabled: Bool = SpacesPreferences.bool(
+        "safeAppPickerEnabled", fallback: false
+    ) {
+        didSet { SpacesPreferences.store.set(appPickerEnabled, forKey: "safeAppPickerEnabled") }
+    }
+    var replaceCommandTab: Bool = SpacesPreferences.bool(
+        "cmdTabReplacementEnabled", legacy: "replaceCommandTab", fallback: false
+    ) {
         didSet {
+            SpacesPreferences.store.set(replaceCommandTab, forKey: "cmdTabReplacementEnabled")
             NotificationCenter.default.post(name: .commandTabSettingChanged, object: nil)
         }
     }
     var commandTabStatus = "Native macOS Cmd+Tab"
 
-    // Enabled on new installs; an unset monitor defaults to the middle screen.
-    // Session-only opt-in until the earlier input freezes have been diagnosed.
-    // Never auto-install the mouse event tap during login or after a reboot.
-    var dockLockEnabled: Bool = false {
-        didSet { refreshDockLock() }
-    }
-    var dockLockDisplayUUID: String = UserDefaults.standard.string(forKey: "dockLockDisplayUUID") ?? "" {
+    var dockLockEnabled: Bool = SpacesPreferences.bool(
+        "safeDockLockEnabled", fallback: false
+    ) {
         didSet {
-            UserDefaults.standard.set(dockLockDisplayUUID, forKey: "dockLockDisplayUUID")
+            SpacesPreferences.store.set(dockLockEnabled, forKey: "safeDockLockEnabled")
+            refreshDockLock()
+        }
+    }
+    var dockLockDisplayUUID: String = SpacesPreferences.string("dockLockDisplayUUID") ?? "" {
+        didSet {
+            SpacesPreferences.store.set(dockLockDisplayUUID, forKey: "dockLockDisplayUUID")
             refreshDockLock()
         }
     }
@@ -199,10 +228,16 @@ final class AppState {
         refreshMonitors()
         guard let target = groups.first(where: { $0.id == group.id }) else { return }
         activeGroupID = target.id
-        ignoreFollowUntil = ProcessInfo.processInfo.systemUptime + 1.5
+        // Allow the full multi-monitor transition to finish without treating
+        // synthetic Space changes as a user swipe.
+        ignoreFollowUntil = ProcessInfo.processInfo.systemUptime + 5.0
         let monitorsCopy = monitors
         Task { @MainActor in
             await SpaceSwitcherService.switchToGroup(target, monitors: monitorsCopy)
+            if self.activeGroupID == target.id {
+                self.ignoreFollowUntil = ProcessInfo.processInfo.systemUptime + 0.55
+                self.lastCurrentSpaces = SpaceSwitcherService.getCurrentSpacePerDisplay()
+            }
         }
     }
 
