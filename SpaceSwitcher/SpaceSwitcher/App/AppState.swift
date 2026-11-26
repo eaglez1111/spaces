@@ -8,7 +8,7 @@ final class AppState {
     var monitors: [MonitorInfo] = []
     var activeGroupID: UUID?
 
-    var followEnabled: Bool = (UserDefaults.standard.object(forKey: "gestureFollowEnabled") as? Bool) ?? true {
+    var followEnabled: Bool = UserDefaults.standard.bool(forKey: "gestureFollowEnabled") {
         didSet { UserDefaults.standard.set(followEnabled, forKey: "gestureFollowEnabled") }
     }
 
@@ -17,31 +17,6 @@ final class AppState {
     var followActivatedAppEnabled: Bool = (UserDefaults.standard.object(forKey: "followActivatedAppEnabled") as? Bool) ?? true {
         didSet { UserDefaults.standard.set(followActivatedAppEnabled, forKey: "followActivatedAppEnabled") }
     }
-
-    // Enabled on new installs; existing user choices remain persisted.
-    var replaceCommandTab: Bool = (UserDefaults.standard.object(forKey: "replaceCommandTab") as? Bool) ?? true {
-        didSet {
-            UserDefaults.standard.set(replaceCommandTab, forKey: "replaceCommandTab")
-            NotificationCenter.default.post(name: .commandTabSettingChanged, object: nil)
-        }
-    }
-    var commandTabStatus: String = "Native macOS switcher"
-
-    // Enabled on new installs; an unset monitor defaults to the middle screen.
-    var dockLockEnabled: Bool = (UserDefaults.standard.object(forKey: "dockLockEnabled") as? Bool) ?? true {
-        didSet {
-            UserDefaults.standard.set(dockLockEnabled, forKey: "dockLockEnabled")
-            refreshDockLock()
-        }
-    }
-    var dockLockDisplayUUID: String = UserDefaults.standard.string(forKey: "dockLockDisplayUUID") ?? "" {
-        didSet {
-            UserDefaults.standard.set(dockLockDisplayUUID, forKey: "dockLockDisplayUUID")
-            refreshDockLock()
-        }
-    }
-    var dockLockStatus: String = "Off"
-    private let dockEdgeGuard = DockEdgeGuard()
 
     private var follower = GestureFollower()
     private var lastCurrentSpaces: CurrentSpaces = [:]
@@ -52,15 +27,6 @@ final class AppState {
 
     init() {
         refreshMonitors()
-        // Prefer the middle monitor for three or more displays, as in the
-        // default three-display VITURE setup; otherwise use the primary one.
-        if dockLockDisplayUUID.isEmpty {
-            let preferred = monitors.count >= 3
-                ? monitors[monitors.count / 2]
-                : monitors.first(where: { $0.displayID == NSScreen.screens.first?.displayID })
-            dockLockDisplayUUID = preferred?.displayUUID ?? monitors.first?.displayUUID ?? ""
-        }
-        refreshDockLock()
         lastCurrentSpaces = SpaceSwitcherService.getCurrentSpacePerDisplay()
         detectActiveGroup()
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -162,7 +128,7 @@ final class AppState {
 
         groups = positions.enumerated().map { groupIndex, indices in
             let id = groupIndex < existing.count ? existing[groupIndex].id : UUID()
-            var group = DesktopGroup(id: id, name: String(groupIndex + 1), icon: "Labtop")
+            var group = DesktopGroup(id: id, name: "Group \(groupIndex + 1)", icon: "Labtop")
             for (monitorIndex, spaceIndex) in indices.enumerated() {
                 if let spaceIndex {
                     group.setSpaceIndex(spaceIndex, on: monitors[monitorIndex])
@@ -173,13 +139,6 @@ final class AppState {
         if let activeGroupID, !groups.contains(where: { $0.id == activeGroupID }) {
             self.activeGroupID = nil
         }
-    }
-
-    /// Update the guard after a monitor reconnect or when the selection changes.
-    func refreshDockLock() {
-        dockLockStatus = dockEdgeGuard.configure(
-            enabled: dockLockEnabled, selectedDisplayUUID: dockLockDisplayUUID
-        )
     }
 
     func cycleGroup(by offset: Int) {

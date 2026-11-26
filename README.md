@@ -15,12 +15,12 @@ Mission Control and macOS Spaces are powerful, but they fall apart on a multi-mo
 
 Spaces lets you link one Space on Monitor A with one Space on Monitor B and treat them as a single named group. Once linked, you can switch both together — your workspace stays aligned and you can jump between projects without losing your setup.
 
-- **Automatic numeric groups** — each group maps corresponding desktops across monitors
+- **Define groups** like "Work", "Music", "Chat" — each group maps every monitor to a specific desktop
 - **Switch instantly** — click a group in the menu bar or press the hotkey, and all monitors jump to the right desktops simultaneously
 - **Overlay switcher** — press Option+Space to get a visual overlay showing all your groups, navigate with arrow keys or number keys
 - **Move windows** — right-click in the overlay to move the frontmost window to another group's space
 - **Auto-detect** — the active group updates automatically when you switch spaces via Mission Control
-- **Follow** (on by default, Settings > General) — change the Space on one display with a swipe or Mission Control and the other displays in that group follow
+- **Follow** (off by default, Settings > General) — change the Space on one display with a swipe, Ctrl+arrow or Mission Control and the other displays in that group follow
 
 ## Requirements
 
@@ -67,7 +67,7 @@ Press **Option+Space** to show the overlay switcher:
 
 ### Settings
 
-- **Groups tab** — review the automatically generated monitor/desktop mappings
+- **Groups tab** — add, remove, reorder, rename groups; pick an icon; map each monitor to a desktop
 - **General tab** — configure the hotkey, enable launch at login
 
 ## How it works
@@ -121,9 +121,11 @@ first Desktop on each display, group 2 the second, and so on. When a monitor has
 fewer Desktops, later groups keep that monitor on its last available Desktop.
 Changes to display/Space configurations automatically update the mapping.
 
-**Option + Left/Right** switch to the previous/next group with wraparound.
-**Option + Tab** cycles groups, and **Option + Space** opens the group overlay.
-Each of these shortcuts can be reassigned in Settings → General.
+**Control + Left/Right** switch to the previous/next group with wraparound.
+Disable macOS's competing shortcuts in **System Settings → Keyboard → Keyboard
+Shortcuts → Mission Control → Move left a space / Move right a space** first.
+**Option + Tab** can optionally be assigned to "Cycle Groups" in Settings → General,
+and **Option + Space** continues to open the group overlay.
 
 The existing swipe-follow setting is independent of direct keyboard switching.
 After display reconnection, "Refresh Groups" is also available in the menu bar.
@@ -141,70 +143,3 @@ disabled in Settings.
 
 Uses a read-only private SkyLight window-to-Space query; behavior may vary with
 macOS versions. Fullscreen-only and minimized windows are not guaranteed.
-
-
-### Bottom Dock lock (this fork)
-
-Spaces → Settings → General includes **Keep Dock at bottom of one monitor** and a
-**Dock monitor** selector. The feature defaults to on for new installations.
-Move the Dock to the preferred monitor if it was previously on a different one. Once enabled, the
-Dock stays on that monitor when you move the pointer to the bottom of another
-screen. Hold **Option** to bypass the guard temporarily when you want to move
-the Dock yourself.
-
-Implementation: a low-overhead CGEventTap on pointer movement and drags, with
-a small boundary guard on the *exposed* bottom edges of non-selected monitors.
-The shared edge between vertically stacked monitors is intentionally not
-guarded, so pointer travel between displays remains possible. No Dock restart,
-private API, or system preference change is needed. The feature uses Spaces'
-existing Accessibility permission. It pauses if the selected display is
-disconnected, the Dock is not at the bottom, or there is only one monitor.
-
-The Dock lock does **not** forcibly move a Dock that's already on the wrong
-screen; place it first, then enable the toggle. Source technique adapted
-from DockPin (MIT license, Copyright 2026 Meti Kadriu, see THIRD_PARTY_NOTICES.md).
-
-
-### Cmd+Tab: apps grouped by Space
-
-Settings → General → **Replace Cmd+Tab with apps grouped by Space** is an
-optional mode (on by default on new installations). The switcher shows one icon
-per application in each native Space group. Thus Chrome can appear once in
-Group 1 and again in Group 2 even if it has several windows in either group. No window previews
-are rendered. Hold Command, tap Tab or Shift+Tab, and release Command to select.
-Escape cancels. Choosing an app switches the full monitor group first and
-then raises one of the app's windows within that group.
-
-This mode takes over the operating system's Cmd+Tab/Cmd+Shift+Tab symbolic
-hotkeys and uses a keyboard event tap; Accessibility permission is required.
-Turning off the setting or quitting Spaces normally restores the native
-switcher. Spaces also attempts to restore the native shortcuts on termination
-signals and on its next launch after a crash. A forced termination (SIGKILL)
-cannot run cleanup: relaunch Spaces to restore the shortcut.
-
-The visible list is based on normal windows, and uses read-only private SkyLight
-Space membership. Minimized, fullscreen-only, and protected windows may not
-appear. The existing Space-group overlay (Option+Space) and group shortcuts
-(Option+arrows by default) are unchanged.
-
-The automatic groups are labeled **1, 2, 3, ...**, each using the original
-computer icon.
-
-
-### App switcher layout and installation defaults
-
-The Cmd+Tab overlay now uses macOS-style **horizontal icon tiles**, one row
-per automatically generated Space group (two groups = two rows). The Space
-groups themselves are unlabeled in this overlay; only the selected app's name
-appears beneath the icons. Each app appears once per group, even if it has
-several windows there. Cmd+Tab navigation, group switching, and focus behavior
-are unchanged.
-
-Automatic groups are now labeled **1, 2, 3, ...** and all use the original
-**Labtop** computer icon. On fresh installs (and only when a preference has
-never been saved), these settings default to on: group swipe-follow,
-single-window app-follow, Cmd+Tab replacement, bottom Dock lock, and launch at
-login. The default dock target is the center display in a three-monitor
-arrangement; otherwise it falls back to the main display. Shortcut defaults:
-Option+Space for the existing group overlay, Option+Left/Right to change
-groups, and Option+Tab to cycle groups. User-customized settings remain intact.

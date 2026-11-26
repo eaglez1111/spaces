@@ -8,8 +8,24 @@ PROD_NAME="Spaces"
 PROD_BUNDLE_ID="com.spaceswitcher.Spaces"
 DEST="/Applications/$PROD_NAME.app"
 
-# Kill the running production app if any
-pkill -x "$PROD_NAME" 2>/dev/null && sleep 0.5 || true
+# IMPORTANT: The .app bundle is renamed to Spaces, but its binary retains
+# the Xcode PRODUCT_NAME 'SpaceSwitcher'. Terminate BOTH names before building.
+# Otherwise, an old process can continue handling global keyboard/mouse events.
+echo "Stopping any running Spaces/SpaceSwitcher instances..."
+pkill -x "$APP_NAME" 2>/dev/null || true
+pkill -x "$PROD_NAME" 2>/dev/null || true
+
+# Do not overwrite a still-running bundle. Never force-kill automatically.
+for i in 1 2 3 4 5 6 7 8 9 10; do
+    if ! pgrep -x "$APP_NAME" >/dev/null && ! pgrep -x "$PROD_NAME" >/dev/null; then
+        break
+    fi
+    sleep 0.5
+done
+if pgrep -x "$APP_NAME" >/dev/null || pgrep -x "$PROD_NAME" >/dev/null; then
+    echo "ERROR: Spaces process is still running. Installation aborted." >&2
+    exit 1
+fi
 
 # Build release
 echo "Building $PROD_NAME..."
@@ -38,17 +54,9 @@ echo "Installing to $DEST..."
 rm -rf "$DEST"
 mv "$TEMP_APP" "$DEST"
 
-# Refresh icon cache so the app icon appears
-touch "$DEST"
+# Register the installed bundle, without restarting the Dock or resetting
+# Accessibility permissions. The user can explicitly launch the app later.
 /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f "$DEST"
-killall Dock 2>/dev/null || true
 
-# Reset accessibility so macOS re-prompts
-tccutil reset Accessibility "$PROD_BUNDLE_ID" 2>/dev/null || true
-
-# Launch the app
-sleep 1
-echo "Launching $PROD_NAME..."
-open "$DEST"
-
-echo "Done!"
+echo "Installed the pre-event-tap Spaces build."
+echo "It was NOT launched. Disable Spaces in Login Items before trying it."
