@@ -21,6 +21,8 @@ final class CommandTabInterceptor {
     }
 
     var onAction: (@MainActor (Action) -> Void)?
+    var onError: (@MainActor (String) -> Void)?
+    private(set) var lastStartError = ""
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     private var cycling = false
@@ -32,7 +34,11 @@ final class CommandTabInterceptor {
 
     func start() -> Bool {
         guard tap == nil else { return true }
-        guard AXIsProcessTrusted() else { return false }
+        lastStartError = ""
+        guard AXIsProcessTrusted() else {
+            lastStartError = "Accessibility permission not granted to this build"
+            return false
+        }
 
         let mask = CGEventMask(
             (1 << CGEventType.keyDown.rawValue) |
@@ -59,7 +65,10 @@ final class CommandTabInterceptor {
             eventsOfInterest: mask,
             callback: callback,
             userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ) else { return false }
+        ) else {
+            lastStartError = "Keyboard event tap unavailable (check Input Monitoring permission)"
+            return false
+        }
 
         let newSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, newTap, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), newSource, .commonModes)
@@ -72,6 +81,7 @@ final class CommandTabInterceptor {
         let forward = CGSSetSymbolicHotKeyEnabled(1, false)
         let backward = CGSSetSymbolicHotKeyEnabled(2, false)
         guard forward == .success, backward == .success else {
+            lastStartError = "System Cmd+Tab takeover failed (errors \(forward.rawValue), \(backward.rawValue))"
             stop()
             return false
         }
@@ -100,8 +110,12 @@ final class CommandTabInterceptor {
 
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            // Avoid leaving Cmd+Tab swallowed when macOS disables our event tap.
-            stop()
+            // Do not tear down the CFMachPort while inside its own callback.
+            // Restore macOS Cmd+Tab on the next main-run-loop turn.
+            DispatchQueue.main.async { [weak self] in
+                self?.stop()
+                self?.onError?("Keyboard tap disabled by macOS; native Cmd+Tab restored")
+            }
             return Unmanaged.passUnretained(event)
         }
 
