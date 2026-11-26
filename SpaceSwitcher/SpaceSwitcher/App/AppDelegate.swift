@@ -4,7 +4,7 @@ import LaunchAtLogin
 
 extension KeyboardShortcuts.Name {
     static let toggleOverlay = Self("toggleOverlay", default: .init(.space, modifiers: .option))
-    // Ctrl+arrows are intercepted by macOS unless Mission Control bindings are disabled.
+    // These defaults match the Option-modified shortcuts shown in Settings.
     static let previousGroup = Self("previousGroup", default: .init(.leftArrow, modifiers: .option))
     static let nextGroup = Self("nextGroup", default: .init(.rightArrow, modifiers: .option))
     static let cycleGroup = Self("cycleGroup", default: .init(.tab, modifiers: .option))
@@ -27,11 +27,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Also recovers the system switcher after a previous crash.
         CommandTabInterceptor.restoreNativeSwitcher()
 
-        // Enable launch at login once on a fresh installation only.
-        // Subsequent user choices in Settings are never overwritten.
-        if UserDefaults.standard.object(forKey: "didSetLaunchAtLoginDefault") == nil {
-            LaunchAtLogin.isEnabled = true
-            UserDefaults.standard.set(true, forKey: "didSetLaunchAtLoginDefault")
+        // Apply the login default only to brand-new installations; do not
+        // override a prior user's login-item choice during an app upgrade.
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: "didSetLaunchAtLoginDefault") == nil {
+            let wasPreviouslyConfigured = [
+                "gestureFollowEnabled", "followActivatedAppEnabled",
+                "replaceCommandTab", "dockLockEnabled"
+            ].contains { defaults.object(forKey: $0) != nil }
+            if !wasPreviouslyConfigured {
+                LaunchAtLogin.isEnabled = true
+            }
+            defaults.set(true, forKey: "didSetLaunchAtLoginDefault")
         }
 
         // Prompt for accessibility access only if not already granted
