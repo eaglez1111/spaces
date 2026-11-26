@@ -42,6 +42,17 @@ struct GroupsSettingsView: View {
                     }
                 }
             }
+            let disabledShortcuts = SpaceSwitcherService.disabledDesktopShortcuts(
+                monitors: appState.monitors
+            )
+            if !disabledShortcuts.isEmpty {
+                Text("macOS Mission Control shortcuts disabled: " +
+                     disabledShortcuts.map { "Switch to Desktop \($0)" }.joined(separator: ", ") +
+                     ". Enable these under System Settings → Keyboard → Keyboard Shortcuts → Mission Control. Spaces cannot switch those desktops with Ctrl+number until they are enabled.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Button("Refresh Groups") {
                 appState.refreshMonitors()
                 appState.detectActiveGroup()
