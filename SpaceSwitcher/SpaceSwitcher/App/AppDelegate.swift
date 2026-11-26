@@ -52,7 +52,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlayManager = OverlayManager(appState: appState)
         appGroupSwitcher = AppGroupSwitcherController(appState: appState)
         commandTab.onAction = { [weak self] action in
+            if case .start = action {
+                self?.appState.commandTabStatus = "Cmd+Tab intercepted — cross-Space picker"
+            }
             self?.appGroupSwitcher?.handle(action)
+        }
+        commandTab.onError = { [weak self] reason in
+            self?.appState.commandTabStatus = reason
         }
         NotificationCenter.default.addObserver(
             self, selector: #selector(configureCommandTab),
@@ -182,9 +188,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.commandTabStatus = "Accessibility not granted to this build"
             return
         }
-        appState.commandTabStatus = commandTab.start()
-            ? "Active — release Command to select, Escape to cancel"
-            : "Could not start keyboard interception; native Cmd+Tab restored"
+        if commandTab.start() {
+            appState.commandTabStatus = "Keyboard hook armed; try Cmd+Tab (not yet intercepted)"
+        } else {
+            appState.commandTabStatus = commandTab.lastStartError
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
