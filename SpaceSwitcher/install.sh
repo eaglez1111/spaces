@@ -8,46 +8,11 @@ LEGACY_EXECUTABLE="SpaceSwitcher"
 PROD_BUNDLE_ID="com.spaceswitcher.Spaces"
 DEST="/Applications/$APP_NAME.app"
 
-# An ad-hoc signature identifies the exact build hash, so old Accessibility
-# grants stop matching after a rebuild. Decide how to sign before replacing
-# or stopping the existing, potentially working app.
+# No per-Mac setup required. Sign each local build ad hoc by default.
+# Developers who already have a reusable signing identity may optionally
+# specify SPACES_SIGNING_IDENTITY. macOS can require new Accessibility approval
+# after code changes to an ad-hoc signed app.
 SIGNING_IDENTITY="${SPACES_SIGNING_IDENTITY:-}"
-if [[ -z "$SIGNING_IDENTITY" ]]; then
-    LOGIN_KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
-    if security find-certificate -c "Spaces Local Signing" -p "$LOGIN_KEYCHAIN" 2>/dev/null |
-            grep -q "BEGIN CERTIFICATE"; then
-        SIGNING_IDENTITY="Spaces Local Signing"
-    fi
-fi
-if [[ -z "$SIGNING_IDENTITY" ]]; then
-    CANDIDATES=$(security find-identity -v -p codesigning 2>/dev/null |
-        grep -E '"(Apple Development:|Developer ID Application:)' |
-        awk '{print $2}' || true)
-    if [[ $(printf '%s\n' "$CANDIDATES" | sed '/^$/d' | wc -l | tr -d ' ') == "1" ]]; then
-        SIGNING_IDENTITY="$CANDIDATES"
-    fi
-fi
-if [[ -z "$SIGNING_IDENTITY" && "${SPACES_ALLOW_ADHOC:-0}" != "1" ]]; then
-    cat >&2 <<'MESSAGE'
-No reusable code-signing identity found. Your installed Spaces was NOT changed.
-Ad-hoc signing would make macOS forget Accessibility permission on rebuild.
-
-One-time setup:
-  In Keychain Access > Certificate Assistant > Create a Certificate:
-  Name: Spaces Local Signing
-  Identity Type: Self Signed Root
-  Certificate Type: Code Signing
-  Keep the identity in your login keychain and trust it for Code Signing.
-  Then rerun ./install.sh and grant Accessibility to Spaces once.
-
-Or specify an existing certificate:
-  SPACES_SIGNING_IDENTITY="certificate name or SHA-1" ./install.sh
-
-Temporary bypass (will likely require Accessibility reapproval):
-  SPACES_ALLOW_ADHOC=1 ./install.sh
-MESSAGE
-    exit 1
-fi
 
 echo "Building Spaces..."
 # Xcode produces Spaces.app directly; there is no separate development app.
@@ -81,7 +46,7 @@ if [[ -n "$SIGNING_IDENTITY" ]]; then
     echo "Signing production Spaces with: $SIGNING_IDENTITY"
     codesign --force --sign "$SIGNING_IDENTITY" "$TEMP_APP"
 else
-    echo "WARNING: Explicit ad-hoc signing chosen; macOS may require reapproval."
+    echo "Using ad-hoc signing (no certificate setup). Accessibility may need reapproval after updates."
     codesign --force --sign - "$TEMP_APP"
 fi
 codesign --verify --deep --strict "$TEMP_APP"
