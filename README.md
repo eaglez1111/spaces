@@ -165,46 +165,45 @@ screen; place it first, then enable the toggle. Source technique adapted
 from DockPin (MIT license, Copyright 2026 Meti Kadriu, see THIRD_PARTY_NOTICES.md).
 
 
-### Cmd+Tab: apps grouped by Space
+### Cross-Space app picker (native Cmd+Tab is untouched)
 
-Settings → General → **Replace Cmd+Tab with apps grouped by Space** is an
-optional mode (on by default on new installations). The switcher shows one icon
-per application in each native Space group. Thus Chrome can appear once in
-Group 1 and again in Group 2 even if it has several windows in either group. No window previews
-are rendered. Hold Command, tap Tab or Shift+Tab, and release Command to select.
-Escape cancels. Choosing an app switches the full monitor group first and
-then raises one of the app's windows within that group.
+After the previous system input freeze, the app picker is now independent of
+macOS Cmd+Tab, and disabled by default until the user explicitly enables it in
+Settings → General. By default **Option+Shift+Tab** opens a small app-icon picker.
 
-This mode takes over the operating system's Cmd+Tab/Cmd+Shift+Tab symbolic
-hotkeys and uses a keyboard event tap; Accessibility permission is required.
-Turning off the setting or quitting Spaces normally restores the native
-switcher. Spaces also attempts to restore the native shortcuts on termination
-signals and on its next launch after a crash. A forced termination (SIGKILL)
-cannot run cleanup: relaunch Spaces to restore the shortcut.
+The picker shows **one horizontal row per automatic Space group**: Space 1 in
+the first row, Space 2 directly beneath it, and so on. No group labels or
+separate group icons; just one icon per app per group. Chrome can appear in
+both rows when it has windows in both Spaces. An empty row is shown as
+"No detected apps" rather than allowing rows to collapse together.
 
-The visible list is based on normal windows, and uses read-only private SkyLight
-Space membership. Minimized, fullscreen-only, and protected windows may not
-appear. The existing Space-group overlay (Option+Space) and group shortcuts
-(Option+arrows by default) are unchanged.
+Navigate with Left/Right (within a row), Up/Down (between rows), or Tab
+(among apps), Enter to select, and Escape to cancel. The selected app's Space
+group becomes active on all monitors before the relevant app window is raised.
+The picker always appears on the monitor selected under Dock monitor.
 
-The automatic groups are labeled **1, 2, 3, ...**, each using the original
-computer icon.
+The picker runs its bounded, user-triggered window inventory away from the
+main/input thread. It uses the existing read-only private SkyLight Space
+membership function; some minimized, fullscreen-only, or inaccessible
+windows may not be detected. **It does not disable or intercept native Cmd+Tab.**
 
+The Dock monitor lock is also **off by default after recovery**, with a separate
+toggle under General settings. This opt-in input guard can keep the Dock
+on one screen; it disables itself on event-tap timeout instead of repeatedly
+re-enabling. Hold Option to bypass deliberately.
 
-### App switcher layout and installation defaults
+### Shortcuts and safe installation
 
-The Cmd+Tab overlay now uses macOS-style **horizontal icon tiles**, one row
-per automatically generated Space group (two groups = two rows). The Space
-groups themselves are unlabeled in this overlay; only the selected app's name
-appears beneath the icons. Each app appears once per group, even if it has
-several windows there. Cmd+Tab navigation, group switching, and focus behavior
-are unchanged.
+Default shortcuts: Option+Space (group overlay), Option+Left/Right (previous/
+next group), Option+Tab (cycle groups), and Option+Shift+Tab (cross-Space
+application picker). Each shortcut is editable in Settings.
 
-Automatic groups are now labeled **1, 2, 3, ...** and all use the original
-**Labtop** computer icon. On fresh installs (and only when a preference has
-never been saved), these settings default to on: group swipe-follow,
-single-window app-follow, Cmd+Tab replacement, bottom Dock lock, and launch at
-login. The default dock target is the center display in a three-monitor
-arrangement; otherwise it falls back to the main display. Shortcut defaults:
-Option+Space for the existing group overlay, Option+Left/Right to change
-groups, and Option+Tab to cycle groups. User-customized settings remain intact.
+Automatic groups are numbered **1, 2, 3, ...**, all with the original
+computer icon. Swipe-follow and single-window activated-app following remain
+independently configurable.
+
+After the previous system freeze, the installer stops the actual
+`SpaceSwitcher` executable before replacing `/Applications/Spaces.app`.
+It no longer restarts Dock, resets Accessibility permissions, or automatically
+launches the updated app. The two experimental options start disabled for
+both new and previously configured users until explicitly enabled.
