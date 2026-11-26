@@ -53,11 +53,12 @@ enum AppGroupWindowInventory {
     private nonisolated static func scan(
         nativeGroupSpaces: [[UInt64]], allowedPIDs: Set<pid_t>
     ) -> [AppGroupChoice] {
-        guard let windows = CGWindowListCopyWindowInfo(
+        let windows = CGWindowListCopyWindowInfo(
             [.optionAll, .excludeDesktopElements], kCGNullWindowID
-        ) as? [[String: Any]] else { return [] }
+        ) as? [[String: Any]] ?? []
 
         var candidates: [AppGroupWindow] = []
+        var seenWindowIDs: Set<UInt32> = []
         var inspected = 0
         for window in windows {
             guard let owner = window[kCGWindowOwnerPID as String] as? NSNumber,
@@ -71,17 +72,52 @@ enum AppGroupWindowInventory {
                   width.doubleValue >= 80, height.doubleValue >= 60
             else { continue }
 
-            // Prevent unlimited SkyLight calls if hundreds of windows exist.
             guard inspected < 150 else { break }
             inspected += 1
             let id = number.uint32Value
             let spaces = ActivatedAppWindowLocator.spaceIDs(forWindowID: id)
-            guard !spaces.isEmpty else { continue }
+            guard !spaces.isEmpty, seenWindowIDs.insert(id).inserted else { continue }
             candidates.append(AppGroupWindow(
                 pid: owner.int32Value, windowID: id, spaceIDs: spaces
             ))
         }
-        return AppGroupCatalog.choices(windows: candidates, groups: nativeGroupSpaces)
+
+        // CGWindowList may omit windows on an INACTIVE desktop. AXWindows can
+        // expose those windows without switching Spaces. Fetch them on the
+        // background task with a short per-app timeout; never on an input tap.
+        // Restrict work to regular running applications and 120 AX windows.
+        var inspectedAX = 0
+        for pid in allowedPIDs.sorted().prefix(45) {
+            guard inspectedAX < 120 else { break }
+            let axApp = AXUIElementCreateApplication(pid)
+            AXUIElementSetMessagingTimeout(axApp, 0.15)
+            var rawWindows: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                axApp, kAXWindowsAttribute as CFString, &rawWindows
+            ) == .success, let axWindows = rawWindows as? [AXUIElement] else {
+                continue
+            }
+
+            for window in axWindows.prefix(12) {
+                guard inspectedAX < 120 else { break }
+                inspectedAX += 1
+                var windowID: CGWindowID = 0
+                guard AXWindowNumber(window, &windowID) == .success,
+                      windowID > 0, !seenWindowIDs.contains(windowID) else {
+                    continue
+                }
+                let spaces = ActivatedAppWindowLocator.spaceIDs(forWindowID: windowID)
+                guard !spaces.isEmpty else { continue }
+                seenWindowIDs.insert(windowID)
+                candidates.append(AppGroupWindow(
+                    pid: pid, windowID: windowID, spaceIDs: spaces
+                ))
+            }
+        }
+
+        return AppGroupCatalog.choices(
+            windows: candidates, groups: nativeGroupSpaces
+        )
     }
 }
 
