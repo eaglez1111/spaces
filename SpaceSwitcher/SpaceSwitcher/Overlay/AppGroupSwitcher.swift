@@ -28,6 +28,22 @@ enum AppGroupWindowInventory {
             uniquingKeysWith: { first, _ in first }
         )
 
+        let nativeGroupSpaces: [[UInt64]] = groups.map { group in
+            monitors.compactMap { group.space(on: $0)?.spaceID }
+        }
+
+        // Query each native Space directly. This picks up windows belonging to
+        // inactive Spaces even if a window-to-Space query returns no membership.
+        var memberships: [UInt32: Set<UInt64>] = [:]
+        for spaceID in Set(nativeGroupSpaces.flatMap { $0 }) {
+            guard let windowIDs = ActivatedAppWindowLocator.windowIDs(inSpace: spaceID) else {
+                continue
+            }
+            for windowID in windowIDs {
+                memberships[windowID, default: []].insert(spaceID)
+            }
+        }
+
         var candidates: [AppGroupWindow] = []
         for window in windows {
             guard let owner = window[kCGWindowOwnerPID as String] as? NSNumber,
@@ -44,16 +60,14 @@ enum AppGroupWindowInventory {
             else { continue }
 
             let id = number.uint32Value
-            let nativeSpaces = ActivatedAppWindowLocator.spaceIDs(forWindowID: id)
+            let nativeSpaces = memberships[id]
+                ?? ActivatedAppWindowLocator.spaceIDs(forWindowID: id)
             if nativeSpaces.isEmpty { continue }
             candidates.append(AppGroupWindow(
                 pid: owner.int32Value, windowID: id, spaceIDs: nativeSpaces
             ))
         }
 
-        let nativeGroupSpaces: [[UInt64]] = groups.map { group in
-            monitors.compactMap { group.space(on: $0)?.spaceID }
-        }
         let choices = AppGroupCatalog.choices(
             windows: candidates, groups: nativeGroupSpaces
         )
@@ -135,10 +149,21 @@ struct AppGroupSwitcherView: View {
                                     .id(entry.id)
                                 }
                                 if rowEntries.isEmpty {
-                                    Color.clear.frame(width: tileWidth, height: tileHeight)
+                                    Text("No detected apps")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.white.opacity(0.45))
+                                        .frame(width: 130, height: tileHeight)
                                 }
                             }
                             .frame(height: tileHeight)
+                            .overlay(alignment: .bottom) {
+                                if groupIndex < groupCount - 1 {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.16))
+                                        .frame(height: 1)
+                                        .offset(y: 5)
+                                }
+                            }
                         }
                     }
                     .padding(12)

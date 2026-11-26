@@ -31,7 +31,7 @@ struct GroupsSettingsView: View {
                 ForEach(appState.groups) { group in
                     VStack(alignment: .leading, spacing: 5) {
                         Text(group.name).font(.headline)
-                        HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
                             ForEach(appState.monitors) { monitor in
                                 if let space = group.space(on: monitor) {
                                     Text("\(monitor.label): Desktop \(space.desktopNumber)")
@@ -55,38 +55,71 @@ struct GeneralSettingsView: View {
     @Environment(AppState.self) var appState
 
     var body: some View {
-        Form {
-            HotkeySettingsView()
-            LaunchAtLogin.Toggle("Launch at login")
-            Toggle("Replace Cmd+Tab with apps grouped by Space",
-                   isOn: Binding(get: { appState.replaceCommandTab },
-                                 set: { appState.replaceCommandTab = $0 }))
-            Text("Cmd+Tab: \(appState.commandTabStatus). Release Command to select; Esc cancels. Disable to restore macOS Cmd+Tab.")
-                .font(.caption).foregroundStyle(.secondary)
-            Toggle("Switch the whole group when a Space changes on one display (e.g. three-finger swipe)",
-                   isOn: Binding(get: { appState.followEnabled }, set: { appState.followEnabled = $0 }))
-            Toggle("Follow activated apps with one window (AltTab / Cmd+Tab)",
-                   isOn: Binding(get: { appState.followActivatedAppEnabled },
-                                 set: { appState.followActivatedAppEnabled = $0 }))
+        // Scroll instead of clipping the last options inside a fixed-height Form.
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                GroupBox("Keyboard shortcuts") {
+                    HotkeySettingsView()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(6)
+                }
 
-            Divider()
-            Toggle("Keep Dock at bottom of one monitor",
-                   isOn: Binding(get: { appState.dockLockEnabled },
-                                 set: { appState.dockLockEnabled = $0 }))
-            Picker("Dock monitor", selection: Binding(
-                get: { appState.dockLockDisplayUUID },
-                set: { appState.dockLockDisplayUUID = $0 }
-            )) {
-                ForEach(appState.monitors.filter { !$0.displayUUID.isEmpty }) { monitor in
-                    Text("\(monitor.label) (\(Int(monitor.frame.width))×\(Int(monitor.frame.height)))")
-                        .tag(monitor.displayUUID)
+                GroupBox("Startup and app switching") {
+                    VStack(alignment: .leading, spacing: 9) {
+                        LaunchAtLogin.Toggle("Launch at login")
+                        Toggle("Replace Cmd+Tab with apps grouped by Space",
+                               isOn: Binding(get: { appState.replaceCommandTab },
+                                             set: { appState.replaceCommandTab = $0 }))
+                        Text("Cmd+Tab: \(appState.commandTabStatus). Release Command to select; Esc cancels.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(6)
+                }
+
+                GroupBox("Space synchronization") {
+                    VStack(alignment: .leading, spacing: 9) {
+                        Toggle("Follow Space changes across monitors",
+                               isOn: Binding(get: { appState.followEnabled },
+                                             set: { appState.followEnabled = $0 }))
+                        Text("A swipe on one monitor switches the other monitors to the corresponding group.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Toggle("Follow activated apps with one window",
+                               isOn: Binding(get: { appState.followActivatedAppEnabled },
+                                             set: { appState.followActivatedAppEnabled = $0 }))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(6)
+                }
+
+                GroupBox("Dock") {
+                    VStack(alignment: .leading, spacing: 9) {
+                        Toggle("Keep Dock at bottom of one monitor",
+                               isOn: Binding(get: { appState.dockLockEnabled },
+                                             set: { appState.dockLockEnabled = $0 }))
+                        Picker("Dock monitor", selection: Binding(
+                            get: { appState.dockLockDisplayUUID },
+                            set: { appState.dockLockDisplayUUID = $0 }
+                        )) {
+                            ForEach(appState.monitors.filter { !$0.displayUUID.isEmpty }) { monitor in
+                                Text("\(monitor.label) (\(Int(monitor.frame.width))×\(Int(monitor.frame.height)))")
+                                    .tag(monitor.displayUUID)
+                            }
+                        }
+                        Text("Dock lock: \(appState.dockLockStatus). Move the Dock to the selected monitor first. Hold Option to bypass.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Refresh Dock lock") { appState.refreshDockLock() }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(6)
                 }
             }
-            Text("Dock lock: \(appState.dockLockStatus). Place the Dock on your chosen monitor before enabling. Hold Option to temporarily bypass.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Button("Refresh Dock lock") { appState.refreshDockLock() }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
         }
-        .padding()
     }
 }

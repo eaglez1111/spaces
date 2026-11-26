@@ -15,6 +15,45 @@ enum ActivatedAppWindowLocator {
         return unsafeBitCast(symbol, to: CopySpacesForWindows.self)
     }()
 
+    // Enumerate windows directly from a native Space, including inactive Spaces.
+    // This complements SLSCopySpacesForWindows, which can omit off-Space windows.
+    // The window-to-Space API above takes NSNumber objects; this different API
+    // expects *raw Space IDs* stored as CFArray pointer values.
+    private typealias CopyWindowsForSpace = @convention(c) (
+        Int32, UInt32, CFArray, UInt32,
+        UnsafeMutablePointer<UInt64>, UnsafeMutablePointer<UInt64>
+    ) -> Unmanaged<CFArray>?
+
+    private static let copyWindowsForSpace: CopyWindowsForSpace? = {
+        guard let handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY),
+              let symbol = dlsym(handle, "SLSCopyWindowsWithOptionsAndTags") else { return nil }
+        return unsafeBitCast(symbol, to: CopyWindowsForSpace.self)
+    }()
+
+    /// Returns nil if the optional private API is unavailable; never guesses a Space.
+    static func windowIDs(inSpace spaceID: UInt64) -> Set<UInt32>? {
+        guard spaceID > 0, let copyWindowsForSpace else { return nil }
+        var pointer: UnsafeRawPointer? = UnsafeRawPointer(bitPattern: UInt(spaceID))
+        guard let input = CFArrayCreate(kCFAllocatorDefault, &pointer, 1, nil) else { return nil }
+        var setTags: UInt64 = 0
+        var clearTags: UInt64 = 0
+        guard let result = copyWindowsForSpace(
+            CGSMainConnectionID(), 0, input, 0x7, &setTags, &clearTags
+        )?.takeRetainedValue() else { return nil }
+
+        var ids = Set<UInt32>()
+        for index in 0..<CFArrayGetCount(result) {
+            guard let value = CFArrayGetValueAtIndex(result, index) else { continue }
+            let number = Unmanaged<CFNumber>.fromOpaque(value).takeUnretainedValue()
+            var raw: Int64 = 0
+            if CFNumberGetValue(number, .sInt64Type, &raw),
+               raw > 0, raw <= Int64(UInt32.max) {
+                ids.insert(UInt32(raw))
+            }
+        }
+        return ids
+    }
+
     static func spaceIDForSingleWindow(processID: pid_t) -> UInt64? {
         guard let copySpacesForWindows,
               let windows = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID)
