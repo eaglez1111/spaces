@@ -3,6 +3,7 @@ import SwiftUI
 
 /// Stable settings domain independent of whether Xcode launched
 /// SpaceSwitcher.app or the installer launched the re-signed Spaces.app.
+@MainActor
 private enum SpacesPreferences {
     static let store = UserDefaults(suiteName: "com.spaceswitcher.Spaces") ?? .standard
 
