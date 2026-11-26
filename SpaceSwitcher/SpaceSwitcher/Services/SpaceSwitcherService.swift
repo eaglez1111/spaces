@@ -135,7 +135,7 @@ enum SpaceSwitcherService {
                     continue
                 }
                 _ = postKeystroke(
-                    source: CGEventSource(stateID: .privateState),
+                    source: CGEventSource(stateID: .combinedSessionState),
                     keyCode: mapping.keyCode,
                     flags: mapping.flags
                 )
