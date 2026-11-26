@@ -71,14 +71,14 @@ struct GeneralSettingsView: View {
                         Toggle("Replace Cmd+Tab with cross-Space app picker",
                                isOn: Binding(get: { appState.replaceCommandTab },
                                              set: { appState.replaceCommandTab = $0 }))
-                        Text("Cmd+Tab: \(appState.commandTabStatus). Hold Command and tap Tab (or Shift+Tab); release Command to select; Esc cancels.")
+                        Text("Cmd+Tab: \(appState.commandTabStatus). Hold Command and tap Tab (or Shift+Tab); release Command to select; Esc cancels. If the macOS switcher still appears, check Input Monitoring permissions.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                         Toggle("Enable Option+Shift+Tab picker shortcut (preview)",
                                isOn: Binding(get: { appState.appPickerEnabled },
                                              set: { appState.appPickerEnabled = $0 }))
-                        Text("The same picker shows one horizontal row for each Space group. Both features are off on every launch until you opt in.")
+                        Text("The picker keeps Space 1 apps on the first row, Space 2 on the second. These settings now persist across relaunches.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -98,6 +98,11 @@ struct GeneralSettingsView: View {
                         HStack {
                             Button("Open Accessibility Settings") {
                                 AccessibilityManager.openSettings()
+                            }
+                            Button("Input Monitoring") {
+                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+                                    NSWorkspace.shared.open(url)
+                                }
                             }
                             Button("Recheck Permission") {
                                 accessibilityGranted = AccessibilityManager.isTrusted
@@ -146,7 +151,7 @@ struct GeneralSettingsView: View {
                                     .tag(monitor.displayUUID)
                             }
                         }
-                        Text("Dock lock: \(appState.dockLockStatus). Requires Accessibility. Select the monitor with the existing Dock, then enable; hold Option to bypass. Toggle off if pointer movement becomes abnormal.")
+                        Text("Dock lock: \(appState.dockLockStatus). Your checked setting and monitor selection persist after a restart. Requires Accessibility; hold Option to bypass if you need to move the Dock.")
                             .font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                         Button("Refresh Dock lock") { appState.refreshDockLock() }
