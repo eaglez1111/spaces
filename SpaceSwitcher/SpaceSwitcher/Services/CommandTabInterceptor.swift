@@ -48,11 +48,15 @@ final class CommandTabInterceptor {
         let callback: CGEventTapCallBack = { _, type, event, raw in
             guard let raw else { return Unmanaged.passUnretained(event) }
             // Installed on the main run loop. Keep the callback itself very short.
-            return MainActor.assumeIsolated {
-                Unmanaged<CommandTabInterceptor>
+            // assumeIsolated requires a Sendable return type in Swift 6.
+            // Keep the CGEvent result local and return Void across the boundary.
+            var result: Unmanaged<CGEvent>?
+            MainActor.assumeIsolated {
+                result = Unmanaged<CommandTabInterceptor>
                     .fromOpaque(raw).takeUnretainedValue()
                     .handle(type: type, event: event)
             }
+            return result
         }
         guard let newTap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
