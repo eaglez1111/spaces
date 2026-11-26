@@ -39,13 +39,7 @@ final class AppState {
         didSet { SpacesPreferences.store.set(followActivatedAppEnabled, forKey: "followActivatedAppEnabled") }
     }
 
-    // User choices persist across relaunches, including re-signed installs.
-    // Defaults remain conservative for input-hook features after the earlier freezes.
-    var appPickerEnabled: Bool = SpacesPreferences.bool(
-        "safeAppPickerEnabled", fallback: false
-    ) {
-        didSet { SpacesPreferences.store.set(appPickerEnabled, forKey: "safeAppPickerEnabled") }
-    }
+    // Cmd+Tab replacement is opt-in and persists across launches.
     var replaceCommandTab: Bool = SpacesPreferences.bool(
         "cmdTabReplacementEnabled", legacy: "replaceCommandTab", fallback: false
     ) {

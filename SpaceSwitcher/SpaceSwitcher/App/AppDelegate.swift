@@ -5,16 +5,13 @@ import KeyboardShortcuts
 import LaunchAtLogin
 
 extension KeyboardShortcuts.Name {
-    static let toggleOverlay = Self("toggleOverlay", default: .init(.space, modifiers: .option))
     // These defaults match the Option-modified shortcuts shown in Settings.
     static let previousGroup = Self("previousGroup", default: .init(.leftArrow, modifiers: .option))
     static let nextGroup = Self("nextGroup", default: .init(.rightArrow, modifiers: .option))
     static let cycleGroup = Self("cycleGroup", default: .init(.tab, modifiers: .option))
-    static let appPicker = Self("appPicker", default: .init(.tab, modifiers: [.option, .shift]))
 }
 
 extension Notification.Name {
-    static let showOverlay = Notification.Name("showOverlay")
     static let showSettings = Notification.Name("showSettings")
     static let commandTabSettingChanged = Notification.Name("commandTabSettingChanged")
 }
@@ -22,7 +19,6 @@ extension Notification.Name {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState = AppState()
-    private var overlayManager: OverlayManager?
     private var appGroupSwitcher: AppGroupSwitcherController?
     private let commandTab = CommandTabInterceptor()
     private var terminationSource: DispatchSourceSignal?
@@ -49,8 +45,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Read Accessibility status passively. The user can open its settings
         // explicitly; never keep re-prompting from startup or Space hotkeys.
 
-        // Set up overlay manager
-        overlayManager = OverlayManager(appState: appState)
         appGroupSwitcher = AppGroupSwitcherController(appState: appState)
         commandTab.onAction = { [weak self] action in
             if case .start = action {
@@ -66,13 +60,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .commandTabSettingChanged, object: nil
         )
         configureCommandTab()
-        // Register global hotkey
-        KeyboardShortcuts.onKeyUp(for: .toggleOverlay) { [weak self] in
-            Task { @MainActor in
-                self?.overlayManager?.toggle()
-            }
-        }
-
         // Globally switch group directly. The action wraps at the ends.
         // Fire on key DOWN so releasing Option before Tab cannot lose the
         // group-change command. Debounce accidental key repeat.
@@ -85,20 +72,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         KeyboardShortcuts.onKeyDown(for: .cycleGroup) { [weak self] in
             Task { @MainActor in self?.cycleOnHotkey(by: 1) }
         }
-        KeyboardShortcuts.onKeyUp(for: .appPicker) { [weak self] in
-            Task { @MainActor in
-                guard let self, self.appState.appPickerEnabled else { return }
-                self.appGroupSwitcher?.openOrAdvance()
-            }
-        }
-
-        // Listen for "Show Switcher" from menu bar
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(showOverlay),
-            name: .showOverlay,
-            object: nil
-        )
 
         // Listen for "Show Settings" requests
         NotificationCenter.default.addObserver(
@@ -163,13 +136,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard now - lastGroupKeyAt >= 0.15 else { return }
         lastGroupKeyAt = now
         appState.cycleGroup(by: offset)
-    }
-
-    @objc private func showOverlay() {
-        let manager = overlayManager
-        Task { @MainActor in
-            manager?.show()
-        }
     }
 
     /// Handles installer SIGTERM without running unsafe CoreGraphics work

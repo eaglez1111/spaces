@@ -140,10 +140,10 @@ enum SpaceSwitcherService {
                     flags: mapping.flags
                 )
                 // Short separation; never wait a whole animation per monitor.
-                try? await Task.sleep(for: .milliseconds(35))
+                try? await Task.sleep(for: .milliseconds(18))
             }
             // Give WindowServer one animation interval to settle before a retry.
-            try? await Task.sleep(for: .milliseconds(attempt == 1 ? 260 : 200))
+            try? await Task.sleep(for: .milliseconds(attempt == 1 ? 200 : 160))
         }
 
         let final = getCurrentSpacePerDisplay()

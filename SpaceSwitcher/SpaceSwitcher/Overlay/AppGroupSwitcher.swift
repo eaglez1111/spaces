@@ -301,31 +301,23 @@ final class AppGroupSwitcherController {
     private var loading = false
     private var selectionGeneration = 0
     // Cmd+Tab can be released before the background window scan completes.
-    private var queuedSteps: [Bool] = []
+    private var queuedNavigation: [CommandTabInterceptor.Action] = []
     private var commitWhenReady = false
 
     init(appState: AppState) {
         self.appState = appState
     }
 
-    func openOrAdvance() {
-        if panel != nil {
-            step(reverse: false)
-        } else if !loading {
-            show()
-        }
-    }
-
     func handle(_ action: CommandTabInterceptor.Action) {
         switch action {
         case .start(let reverse):
             show()
-            queuedSteps.append(reverse) // native Cmd+Tab selects next/previous
-        case .advance(let reverse):
+            queuedNavigation.append(.advance(reverse: reverse)) // native Cmd+Tab starts on the next app
+        case .advance, .moveHorizontal, .moveVertical:
             if loading {
-                queuedSteps.append(reverse)
+                queuedNavigation.append(action)
             } else {
-                step(reverse: reverse)
+                navigate(action)
             }
         case .commit:
             if loading {
@@ -399,9 +391,9 @@ final class AppGroupSwitcherController {
 
         // Apply keys received while scanning. On a quick Cmd+Tab tap,
         // complete the choice once the inventory arrives.
-        let steps = queuedSteps
-        queuedSteps.removeAll()
-        for reverse in steps { step(reverse: reverse) }
+        let actions = queuedNavigation
+        queuedNavigation.removeAll()
+        for action in actions { navigate(action) }
         if commitWhenReady {
             commitWhenReady = false
             commit()
@@ -434,6 +426,15 @@ final class AppGroupSwitcherController {
             return false
         }
         return true
+    }
+
+    private func navigate(_ action: CommandTabInterceptor.Action) {
+        switch action {
+        case .advance(let reverse): step(reverse: reverse)
+        case .moveHorizontal(let offset): stepInRow(offset: offset)
+        case .moveVertical(let offset): moveRow(offset: offset)
+        default: break
+        }
     }
 
     private func step(reverse: Bool) {
@@ -510,7 +511,7 @@ final class AppGroupSwitcherController {
     private func dismiss() {
         showGeneration += 1
         loading = false
-        queuedSteps.removeAll()
+        queuedNavigation.removeAll()
         commitWhenReady = false
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)

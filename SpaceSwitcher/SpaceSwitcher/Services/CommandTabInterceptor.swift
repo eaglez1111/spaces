@@ -16,6 +16,8 @@ final class CommandTabInterceptor {
     enum Action: Sendable {
         case start(reverse: Bool)
         case advance(reverse: Bool)
+        case moveHorizontal(offset: Int)
+        case moveVertical(offset: Int)
         case commit
         case cancel
     }
@@ -153,10 +155,14 @@ final class CommandTabInterceptor {
                 cycling = false
                 notify(.cancel)
             }
-        case 123, 126: // left or up
-            if isDown { notify(.advance(reverse: true)) }
-        case 124, 125: // right or down
-            if isDown { notify(.advance(reverse: false)) }
+        case 123: // left: previous app in the current Space row
+            if isDown { notify(.moveHorizontal(offset: -1)) }
+        case 124: // right: next app in the current Space row
+            if isDown { notify(.moveHorizontal(offset: 1)) }
+        case 125: // down: next Space row
+            if isDown { notify(.moveVertical(offset: 1)) }
+        case 126: // up: previous Space row
+            if isDown { notify(.moveVertical(offset: -1)) }
         case 36, 76: // Return
             if isDown {
                 cycling = false
