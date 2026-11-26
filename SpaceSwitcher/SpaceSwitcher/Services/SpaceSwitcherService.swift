@@ -28,9 +28,9 @@ enum SpaceSwitcherService {
         let trusted = AXIsProcessTrusted()
         logger.info("AXIsProcessTrusted: \(trusted)")
 
-        if !trusted {
-            logger.warning("Accessibility NOT granted — CGEvent will be skipped, trying AppleScript fallback.")
-            AccessibilityManager.checkAndPrompt()
+        guard trusted else {
+            logger.warning("Accessibility denied. Skipping synthetic Space switches (no repeated prompt).")
+            return
         }
 
         var desktopsToSwitch: [Int] = []
@@ -83,7 +83,10 @@ enum SpaceSwitcherService {
         }
         guard !desktops.isEmpty else { return }
         let trusted = AXIsProcessTrusted()
-        if !trusted { AccessibilityManager.checkAndPrompt() }
+        guard trusted else {
+            logger.warning("Accessibility denied; Space-follow skipped without prompting")
+            return
+        }
         await postDesktopSwitches(desktops, trusted: trusted)
     }
 

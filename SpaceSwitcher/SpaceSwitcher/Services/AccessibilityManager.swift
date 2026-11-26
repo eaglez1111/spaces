@@ -1,16 +1,18 @@
 import AppKit
+import ApplicationServices
 
 enum AccessibilityManager {
-    static var isTrusted: Bool {
-        AXIsProcessTrusted()
-    }
+    /// Passive check: never summons a system dialog from a hotkey, gesture,
+    /// or recurring background event.
+    static var isTrusted: Bool { AXIsProcessTrusted() }
 
-    /// Prompt for accessibility access only if not already trusted.
-    static func checkAndPrompt() {
-        if AXIsProcessTrusted() { return }
-
-        let key = "AXTrustedCheckOptionPrompt" as CFString
-        let options = [key: true] as CFDictionary
-        AXIsProcessTrustedWithOptions(options)
+    /// Explicit recovery action, shown in Settings. Re-add
+    /// /Applications/Spaces.app if a recently re-signed build is not trusted.
+    @MainActor
+    static func openSettings() {
+        if let url = URL(string:
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
     }
 }

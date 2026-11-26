@@ -18,19 +18,21 @@ final class AppState {
         didSet { UserDefaults.standard.set(followActivatedAppEnabled, forKey: "followActivatedAppEnabled") }
     }
 
-    // Explicit opt-in after prior freezes. Never replaces native Cmd+Tab.
-    var appPickerEnabled: Bool = UserDefaults.standard.bool(forKey: "safeAppPickerEnabled") {
+    // Session-only safety controls. Existing saved preferences are intentionally
+    // ignored, so a crash/reboot cannot automatically reinstate input interception.
+    var appPickerEnabled: Bool = false
+    var replaceCommandTab: Bool = false {
         didSet {
-            UserDefaults.standard.set(appPickerEnabled, forKey: "safeAppPickerEnabled")
+            NotificationCenter.default.post(name: .commandTabSettingChanged, object: nil)
         }
     }
+    var commandTabStatus = "Native macOS Cmd+Tab"
 
     // Enabled on new installs; an unset monitor defaults to the middle screen.
-    var dockLockEnabled: Bool = UserDefaults.standard.bool(forKey: "safeDockLockEnabled") {
-        didSet {
-            UserDefaults.standard.set(dockLockEnabled, forKey: "safeDockLockEnabled")
-            refreshDockLock()
-        }
+    // Session-only opt-in until the earlier input freezes have been diagnosed.
+    // Never auto-install the mouse event tap during login or after a reboot.
+    var dockLockEnabled: Bool = false {
+        didSet { refreshDockLock() }
     }
     var dockLockDisplayUUID: String = UserDefaults.standard.string(forKey: "dockLockDisplayUUID") ?? "" {
         didSet {
