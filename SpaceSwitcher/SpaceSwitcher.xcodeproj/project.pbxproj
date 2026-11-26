@@ -19,7 +19,6 @@
 		19F3467D5592246D46616000 /* SpaceSwitcherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1D73DA7B4FEB34EEA96877 /* SpaceSwitcherApp.swift */; };
 		220EDB97C2F63E902B56D087 /* SessionGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4156E7D6B9610662E040BC60 /* SessionGuard.swift */; };
 		43258A596FDD206BF54E016D /* CGSPrivate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0731CEDE994E470A48867B5 /* CGSPrivate.swift */; };
-		43FFCE9B9289DE0F5D877FE7 /* OverlayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CBF89239D977C5E6018C9B /* OverlayManager.swift */; };
 		5BB65F734A1542B07661D155 /* SessionSafety.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7018D79B3F1D2EBD4861B6E /* SessionSafety.swift */; };
 		63289137A46C186245F06E95 /* MonitorMappingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5FC4B141B8E046513571E6E /* MonitorMappingView.swift */; };
 		658143785DF5075AC26B6C27 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1821E8BB46F8C5B39C68CF0B /* MenuBarView.swift */; };
@@ -43,7 +42,6 @@
 		DAE47A0D4E60CF56B97980B0 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C5687B4F304DCC6BB373E4 /* AppState.swift */; };
 		E7B3D15608BD819319068929 /* OverlayPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBF2012EF7F2217F044A09E /* OverlayPanel.swift */; };
 		F35457B14B8EE4D983DF4E80 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A5A37978954CFFA4A6F0208 /* Assets.xcassets */; };
-		F5FCC3E292EDF9640E24FEE0 /* OverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60AE9CD1620F9B149804385 /* OverlayView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -74,11 +72,9 @@
 		7A83109240AF6FACCC850782 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		877DBBE0B3AD2EB37C8682ED /* SpaceSwitcher.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SpaceSwitcher.entitlements; sourceTree = "<group>"; };
 		8C4BC5C2790911E5EE41FB19 /* NSScreen+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSScreen+Extensions.swift"; sourceTree = "<group>"; };
-		B5CBF89239D977C5E6018C9B /* OverlayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayManager.swift; sourceTree = "<group>"; };
 		B7018D79B3F1D2EBD4861B6E /* SessionSafety.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSafety.swift; sourceTree = "<group>"; };
 		B99E961A805224DAE6EC4908 /* SpaceSwitcherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceSwitcherService.swift; sourceTree = "<group>"; };
 		BCBF2012EF7F2217F044A09E /* OverlayPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPanel.swift; sourceTree = "<group>"; };
-		C60AE9CD1620F9B149804385 /* OverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayView.swift; sourceTree = "<group>"; };
 		D01D2E144AE1C45F0FDB9FBA /* MonitorInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitorInfo.swift; sourceTree = "<group>"; };
 		DD665D90874B51B299675F3D /* GestureFollower.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureFollower.swift; sourceTree = "<group>"; };
 		F0731CEDE994E470A48867B5 /* CGSPrivate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGSPrivate.swift; sourceTree = "<group>"; };
@@ -128,10 +124,8 @@
 		350042650CC08CA7806DACDB /* Overlay */ = {
 			isa = PBXGroup;
 			children = (
-				B5CBF89239D977C5E6018C9B /* OverlayManager.swift */,
 				D1A000000000000000000004 /* AppGroupSwitcher.swift */,
 				BCBF2012EF7F2217F044A09E /* OverlayPanel.swift */,
-				C60AE9CD1620F9B149804385 /* OverlayView.swift */,
 				FBC9BD10777570A68A1B5DFA /* VisualEffectBackground.swift */,
 			);
 			path = Overlay;
@@ -319,10 +313,8 @@
 				8FED2ED0DB3A2709255F6AB3 /* MonitorManager.swift in Sources */,
 				63289137A46C186245F06E95 /* MonitorMappingView.swift in Sources */,
 				BD6EC5B3DEB1DC8A59BAA138 /* NSScreen+Extensions.swift in Sources */,
-				43FFCE9B9289DE0F5D877FE7 /* OverlayManager.swift in Sources */,
 				D1A000000000000000000003 /* AppGroupSwitcher.swift in Sources */,
 				E7B3D15608BD819319068929 /* OverlayPanel.swift in Sources */,
-				F5FCC3E292EDF9640E24FEE0 /* OverlayView.swift in Sources */,
 				D7D055CE573258AD5269C0BC /* PersistenceManager.swift in Sources */,
 				220EDB97C2F63E902B56D087 /* SessionGuard.swift in Sources */,
 				5BB65F734A1542B07661D155 /* SessionSafety.swift in Sources */,

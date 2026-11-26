@@ -1,8 +1,6 @@
 # Spaces
 
-A macOS menu bar app that links Spaces across multiple monitors into named project groups, so you can switch your entire workspace with a single click or hotkey.
-
-![Spaces overlay switcher](screenshot.png)
+A macOS menu bar app that synchronizes Spaces across monitors, with quick group switching and a cross-Space Cmd+Tab picker.
 
 ## The problem
 
@@ -17,9 +15,7 @@ Spaces lets you link one Space on Monitor A with one Space on Monitor B and trea
 
 - **Automatic numeric groups** — each group maps corresponding desktops across monitors
 - **Switch instantly** — click a group in the menu bar or press the hotkey, and all monitors jump to the right desktops simultaneously
-- **Overlay switcher** — press Option+Space to get a visual overlay showing all your groups, navigate with arrow keys or number keys
-- **Move windows** — right-click in the overlay to move the frontmost window to another group's space
-- **Auto-detect** — the active group updates automatically when you switch spaces via Mission Control
+- **Custom Cmd+Tab** — browse apps by Space row; use Up/Down to change rows and Left/Right within a row
 - **Follow** (on by default, Settings > General) — change the Space on one display with a swipe or Mission Control and the other displays in that group follow
 
 ## Requirements
@@ -34,12 +30,12 @@ Spaces lets you link one Space on Monitor A with one Space on Monitor B and trea
 ### Build and install
 
 ```bash
-git clone https://github.com/minsfb/spaces.git
+git clone https://github.com/eaglez1111/spaces.git
 cd spaces/SpaceSwitcher
 ./install.sh
 ```
 
-This builds the app, installs it to `/Applications/Spaces.app`, and launches it.
+This builds the app and installs it to `/Applications/Spaces.app`. Launch Spaces manually after installation.
 
 **No prebuilt binaries are published for this project; build it from source.** See [DEVELOPMENT.md](DEVELOPMENT.md) for build and test details.
 
@@ -53,22 +49,12 @@ On first launch, macOS will prompt you to grant Accessibility access in **System
 
 Click the menu bar icon to:
 - Switch to any group
-- Create a new group (captures your current desktops)
 - Open Settings
-
-### Overlay (Option+Space)
-
-Press **Option+Space** to show the overlay switcher:
-- **Left/Right arrows** — navigate between groups
-- **Enter** — switch to the focused group
-- **1-9** — switch to a group by number
-- **Right-click** — move the frontmost window to the focused group's space
-- **Escape** — dismiss
 
 ### Settings
 
 - **Groups tab** — review the automatically generated monitor/desktop mappings
-- **General tab** — configure the hotkey, enable launch at login
+- **General tab** — configure shortcuts, Cmd+Tab, synchronization, and Dock behavior
 
 ## How it works
 
@@ -82,7 +68,6 @@ Press **Option+Space** to show the overlay switcher:
 
 Findings from testing on macOS 26 (details in the repository issues):
 
-- Other apps' windows cannot be moved between Spaces with private CGS calls without disabling SIP; this project does not use or require SIP changes. Window moves in the overlay work by emulating a title-bar drag plus the Space-switch shortcut.
 - Switching a Space with the private `CGSManagedDisplaySetCurrentSpace` call is not equivalent to a native switch, so it is not used.
 - When an external display is unplugged, macOS folds that display's first Space into the first laptop Space and appends its other Spaces to the laptop's Space list; on replug it restores them, and the first Space comes back with a different internal ID but the same UUID.
 
@@ -95,7 +80,7 @@ SpaceSwitcher/
 ├── Logic/                # Pure logic (no AppKit/CGS), unit-tested via the SwiftPM package
 ├── Services/             # SpaceSwitcherService, MonitorManager, PersistenceManager
 ├── Settings/             # Settings window views
-├── Overlay/              # Overlay switcher panel and views
+├── Overlay/              # Cross-Space Cmd+Tab picker and panel
 ├── Utilities/            # KeyCodes, CGS private API declarations
 └── Resources/            # Assets, Info.plist, entitlements
 ```
@@ -122,7 +107,7 @@ fewer Desktops, later groups keep that monitor on its last available Desktop.
 Changes to display/Space configurations automatically update the mapping.
 
 **Option + Left/Right** switch to the previous/next group with wraparound.
-**Option + Tab** cycles groups, and **Option + Space** opens the group overlay.
+**Option + Tab** cycles groups. **Cmd + Tab** opens the cross-Space app picker when enabled.
 Each of these shortcuts can be reassigned in Settings → General.
 
 The existing swipe-follow setting is independent of direct keyboard switching.
@@ -170,13 +155,13 @@ from DockPin (MIT license, Copyright 2026 Meti Kadriu, see THIRD_PARTY_NOTICES.m
 **Cmd+Tab** can open a custom cross-Space app switcher. This replaces the native
 app switcher only while the user enables it in Settings → General. The enabled/disabled preference now persists across launches. macOS Cmd+Tab
 is restored whenever the toggle is switched off or the app quits normally;
-if the keyboard event tap cannot start, the Settings status explains why. A separate Option+Shift+Tab shortcut can preview the same
-picker without taking over the native Cmd+Tab behavior.
+if the keyboard event tap cannot start, Settings offers keyboard-permission troubleshooting.
 
-The overlay shows one horizontal row per automatic Space group: the first
+The picker shows one horizontal row per automatic Space group: the first
 row for Space 1, the second directly beneath it for Space 2, etc. No group
 labels or group icons; one icon per app per group. Hold Command, tap Tab or
-Shift+Tab to select, and release Command to switch. Escape cancels. The chosen
+Shift+Tab to cycle, Left/Right to move within a row, or Up/Down to change
+Space rows. Release Command to switch; Escape cancels. The chosen
 app's Space group becomes active on all connected monitors before its window
 is raised. The picker appears on the selected Dock monitor.
 
@@ -198,16 +183,14 @@ Accessibility must be granted to the actual production bundle at
 invalidate its old Accessibility approval. In Privacy & Security →
 Accessibility, remove obsolete SpaceSwitcher and Spaces entries, add the
 installed Spaces.app, and toggle it on. Quit and relaunch the application
-before testing. The app no longer repeatedly presents accessibility prompts
-on hotkey or Space changes; its Settings show a passive trust indicator and
-an explicit button to open system settings.
+before testing. Settings offers a button to open macOS permissions only
+when Accessibility is missing, with Input Monitoring troubleshooting if Cmd+Tab fails.
 
 ### Shortcuts and safe installation
 
-Default shortcuts: Option+Space (group overlay), Option+Left/Right (previous/
-next group), Option+Tab (cycle groups), and Option+Shift+Tab (optional app
-picker preview). Enable custom Cmd+Tab separately in Settings. Each recording
-shortcut is editable in Settings.
+Default shortcuts: Option+Left/Right (previous/next group), Option+Tab
+(cycle groups). Enable custom Cmd+Tab separately in Settings. Group shortcuts
+are editable in Settings.
 
 Automatic groups are numbered **1, 2, 3, ...**, all with the original
 computer icon. Swipe-follow and single-window activated-app following remain
@@ -217,6 +200,5 @@ After the previous system freeze, the installer stops the actual
 `SpaceSwitcher` executable before replacing `/Applications/Spaces.app`.
 It no longer restarts Dock, resets Accessibility permissions, or automatically
 launches the updated app. Settings persist in a stable preferences domain.
-The input-interception options are off on a fresh installation, but remember
-explicit choices on subsequent launches. The Custom Cmd+Tab status distinguishes
-a hook being armed from actual key interception.
+Cmd+Tab replacement is off on a fresh installation and remembers the user's choice.
+Permission troubleshooting is shown only when needed.
