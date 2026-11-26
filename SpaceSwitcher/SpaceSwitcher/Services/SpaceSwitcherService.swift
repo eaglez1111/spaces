@@ -6,133 +6,110 @@ import os.log
 private let logger = Logger(subsystem: "com.spaceswitcher", category: "SpaceSwitcher")
 
 enum SpaceSwitcherService {
+    private struct Target {
+        let displayUUID: String
+        let spaceID: UInt64
+        let desktopNumber: Int
+    }
+
+    // Cancel old retry loops when the user requests a newer group.
+    @MainActor private static var latestSwitch = 0
+
     @MainActor
     static func switchToGroup(_ group: DesktopGroup, monitors: [MonitorInfo]) async {
-        logger.info("=== switchToGroup called: \(group.name, privacy: .public) ===")
-
-        let conn = CGSMainConnectionID()
-        logger.info("CGSMainConnectionID: \(conn)")
-
-        let currentSpaceByUUID = getCurrentSpacePerDisplay(connection: conn)
-        let currentSpacesDesc = currentSpaceByUUID.map { "\($0.key): \($0.value)" }.joined(separator: ", ")
-        logger.info("Current spaces by UUID: \(currentSpacesDesc, privacy: .public)")
-
-        logger.info("Monitors count: \(monitors.count)")
-        for monitor in monitors {
-            let spacesDesc = monitor.spaces.map { "d\($0.desktopNumber)=\($0.spaceID)" }.joined(separator: ",")
-            logger.info("  Monitor '\(monitor.id, privacy: .public)' displayUUID='\(monitor.displayUUID, privacy: .public)' spaces=\(spacesDesc, privacy: .public)")
-        }
-
-        logger.info("Group displaySpaces entries: \(group.displaySpaces.count)")
-
-        let trusted = AXIsProcessTrusted()
-        logger.info("AXIsProcessTrusted: \(trusted)")
-
-        guard trusted else {
-            logger.warning("Accessibility denied. Skipping synthetic Space switches (no repeated prompt).")
+        latestSwitch &+= 1
+        let generation = latestSwitch
+        guard AXIsProcessTrusted() else {
+            logger.warning("Accessibility unavailable; cannot switch group")
             return
         }
 
-        var desktopsToSwitch: [Int] = []
-
-        for monitor in monitors {
-            guard group.hasSpace(on: monitor) else {
-                logger.warning("  Monitor '\(monitor.id, privacy: .public)': no space in group, skipping")
-                continue
-            }
-            guard let spaceInfo = group.space(on: monitor) else {
-                logger.warning("  Monitor '\(monitor.id, privacy: .public)': group's space no longer exists, skipping")
-                continue
-            }
-            let desktopNumber = spaceInfo.desktopNumber
-            guard !monitor.displayUUID.isEmpty else {
-                logger.warning("  Monitor '\(monitor.id, privacy: .public)': empty displayUUID, skipping")
-                continue
-            }
-
-            if let currentID = currentSpaceByUUID[monitor.displayUUID], currentID == spaceInfo.spaceID {
-                logger.info("  Monitor '\(monitor.id, privacy: .public)': already on desktop \(desktopNumber) (spaceID \(spaceInfo.spaceID)), skipping")
-                continue
-            }
-
-            logger.info("  Monitor '\(monitor.id, privacy: .public)': will switch to desktop \(desktopNumber) (spaceID \(spaceInfo.spaceID))")
-            desktopsToSwitch.append(desktopNumber)
+        let targets: [Target] = monitors.compactMap { monitor in
+            guard !monitor.displayUUID.isEmpty,
+                  let space = group.space(on: monitor) else { return nil }
+            return Target(
+                displayUUID: monitor.displayUUID,
+                spaceID: space.spaceID,
+                desktopNumber: space.desktopNumber
+            )
         }
-
-        guard !desktopsToSwitch.isEmpty else {
-            logger.info("No desktops to switch, returning early")
-            return
-        }
-
-        await postDesktopSwitches(desktopsToSwitch, trusted: trusted)
-        logger.info("=== switchToGroup complete ===")
+        await switchTargets(targets, generation: generation)
     }
 
-    /// Switch specific displays to specific Spaces (used by gesture-follow). Requests whose display or
-    /// Space is unknown are skipped. Uses the same keystroke mechanism as `switchToGroup`.
     @MainActor
     static func switchDisplays(_ requests: [SwitchRequest], monitors: [MonitorInfo]) async {
-        var desktops: [Int] = []
-        for request in requests {
-            guard let monitor = monitors.first(where: { $0.displayUUID == request.displayUUID }),
-                  let space = monitor.spaces.first(where: { $0.spaceID == request.spaceID }) else {
-                logger.warning("switchDisplays: unknown display/space for request, skipping")
-                continue
-            }
-            desktops.append(space.desktopNumber)
-        }
-        guard !desktops.isEmpty else { return }
-        let trusted = AXIsProcessTrusted()
-        guard trusted else {
-            logger.warning("Accessibility denied; Space-follow skipped without prompting")
+        latestSwitch &+= 1
+        let generation = latestSwitch
+        guard AXIsProcessTrusted() else {
+            logger.warning("Accessibility unavailable; cannot follow Space changes")
             return
         }
-        await postDesktopSwitches(desktops, trusted: trusted)
+        let targets: [Target] = requests.compactMap { request in
+            guard let monitor = monitors.first(where: {
+                $0.displayUUID == request.displayUUID
+            }), let space = monitor.spaces.first(where: {
+                $0.spaceID == request.spaceID
+            }) else { return nil }
+            return Target(
+                displayUUID: monitor.displayUUID,
+                spaceID: request.spaceID,
+                desktopNumber: space.desktopNumber
+            )
+        }
+        await switchTargets(targets, generation: generation)
     }
 
+    /// macOS changes desktops asynchronously. The previous version sent
+    /// several Ctrl+number events 5ms apart without waiting for animations.
+    /// Verify the native Space ID of EACH display, retry ONLY misses, and
+    /// stop after three attempts instead of flooding the input subsystem.
     @MainActor
-    private static func postDesktopSwitches(_ desktopsToSwitch: [Int], trusted: Bool) async {
-        let desktopsDesc = desktopsToSwitch.map { String($0) }.joined(separator: ", ")
-        logger.info("Desktops to switch: \(desktopsDesc, privacy: .public)")
+    private static func switchTargets(_ targets: [Target], generation: Int) async {
+        guard !targets.isEmpty else { return }
 
-        for desktopNumber in desktopsToSwitch {
-            guard let mapping = KeyCodes.keyMapping(for: desktopNumber) else {
-                logger.error("No key mapping for desktop \(desktopNumber)")
-                continue
+        for attempt in 1...3 {
+            guard generation == latestSwitch, !Task.isCancelled else { return }
+
+            let current = getCurrentSpacePerDisplay()
+            let pending = targets.filter {
+                current[$0.displayUUID] != $0.spaceID
+            }
+            if pending.isEmpty {
+                logger.info("All targeted displays reached requested Spaces")
+                return
             }
 
-            let flagsHex = String(mapping.flags.rawValue, radix: 16)
-            logger.info("Desktop \(desktopNumber): keyCode=\(mapping.keyCode) flags=0x\(flagsHex, privacy: .public)")
-
-            if trusted {
-                // CGEvent keyboard simulation (requires Accessibility)
-                let source = CGEventSource(stateID: .combinedSessionState)
-                logger.info("CGEventSource created: \(source != nil)")
-
-                let didPost = postKeystroke(source: source, keyCode: mapping.keyCode, flags: mapping.flags)
-                logger.info("CGEvent postKeystroke result: \(didPost)")
-
-                if !didPost {
-                    logger.info("CGEvent failed, trying AppleScript fallback")
-                    simulateViaAppleScript(keyCode: Int(mapping.keyCode), controlDown: true,
-                                           optionDown: mapping.flags.contains(.maskAlternate))
+            logger.info("Space switch pass \(attempt): \(pending.count) displays pending")
+            for target in pending {
+                guard generation == latestSwitch, !Task.isCancelled else { return }
+                // The previous display may still be animating. Do not send a
+                // second Ctrl+N before checking what the window server reports.
+                if getCurrentSpacePerDisplay()[target.displayUUID] == target.spaceID {
+                    continue
                 }
-            } else {
-                // No accessibility — go straight to AppleScript via System Events
-                logger.info("Using AppleScript fallback (no accessibility)")
-                simulateViaAppleScript(keyCode: Int(mapping.keyCode), controlDown: true,
-                                       optionDown: mapping.flags.contains(.maskAlternate))
+                guard let mapping = KeyCodes.keyMapping(for: target.desktopNumber) else {
+                    logger.warning("No Space hotkey for desktop \(target.desktopNumber)")
+                    continue
+                }
+                let source = CGEventSource(stateID: .combinedSessionState)
+                let sent = postKeystroke(
+                    source: source, keyCode: mapping.keyCode, flags: mapping.flags
+                )
+                if !sent {
+                    logger.error("Could not synthesize switch to desktop \(target.desktopNumber)")
+                }
+                // Yield so Mission Control can finish changing this display.
+                try? await Task.sleep(for: .milliseconds(380))
             }
+        }
 
-            // Check if space actually changed after a brief wait
-            try? await Task.sleep(for: .milliseconds(5))
-            let newSpaces = getCurrentSpacePerDisplay()
-            let newSpacesDesc = newSpaces.map { "\($0.key): \($0.value)" }.joined(separator: ", ")
-            logger.info("Spaces after switch attempt: \(newSpacesDesc, privacy: .public)")
+        let final = getCurrentSpacePerDisplay()
+        for target in targets where final[target.displayUUID] != target.spaceID {
+            logger.warning("Display \(target.displayUUID, privacy: .public) did not reach desktop \(target.desktopNumber)")
         }
     }
 
-    private static func postKeystroke(source: CGEventSource?, keyCode: UInt16, flags: CGEventFlags) -> Bool {
+        private static func postKeystroke(source: CGEventSource?, keyCode: UInt16, flags: CGEventFlags) -> Bool {
         let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
         let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
 
@@ -149,41 +126,13 @@ enum SpaceSwitcherService {
         logger.info("  Posting keyDown (keyCode=\(keyCode), flags=0x\(flagsHex, privacy: .public)) to .cghidEventTap")
         keyDown.post(tap: .cghidEventTap)
 
-        usleep(10_000) // 10ms
+        usleep(30_000) // Allow key down to register before key up
 
         keyUp.flags = flags
         logger.info("  Posting keyUp to .cghidEventTap")
         keyUp.post(tap: .cghidEventTap)
 
         return true
-    }
-
-    private static func simulateViaAppleScript(keyCode: Int, controlDown: Bool, optionDown: Bool) {
-        var modifiers: [String] = []
-        if controlDown { modifiers.append("control down") }
-        if optionDown { modifiers.append("option down") }
-        let modifierClause = modifiers.isEmpty ? "" : " using {\(modifiers.joined(separator: ", "))}"
-
-        let script = """
-        tell application "System Events"
-            key code \(keyCode)\(modifierClause)
-        end tell
-        """
-
-        logger.info("  AppleScript: \(script, privacy: .public)")
-
-        if let appleScript = NSAppleScript(source: script) {
-            var error: NSDictionary?
-            appleScript.executeAndReturnError(&error)
-            if let error {
-                let errorDesc = error.description
-                logger.error("  AppleScript error: \(errorDesc, privacy: .public)")
-            } else {
-                logger.info("  AppleScript executed successfully")
-            }
-        } else {
-            logger.error("  Failed to create NSAppleScript")
-        }
     }
 
     static func getCurrentSpacePerDisplay(connection: Int32 = CGSMainConnectionID()) -> [String: UInt64] {
