@@ -39,6 +39,31 @@ This builds the app and installs it to `/Applications/Spaces.app`. Launch Spaces
 
 **No prebuilt binaries are published for this project; build it from source.** See [DEVELOPMENT.md](DEVELOPMENT.md) for build and test details.
 
+### Stable signing and one-time permission cleanup
+
+The installer now checks for a reusable signing identity **before** stopping or
+replacing the installed app. It uses a single production bundle identity,
+`com.spaceswitcher.Spaces`. The intermediate development app is built unsigned
+and is not launched or authorized by the installer.
+
+To avoid repeated macOS Accessibility reapproval, create a code-signing
+certificate **once** using Keychain Access → Certificate Assistant → Create a
+Certificate (name `Spaces Local Signing`, identity type **Self Signed Root**,
+certificate type **Code Signing**). Keep it in your login keychain and configure
+it to be trusted for Code Signing. An existing Apple Development or Developer
+ID Application identity also works; select it explicitly with
+`SPACES_SIGNING_IDENTITY="certificate name or SHA-1" ./install.sh`.
+
+Without a stable identity, `./install.sh` stops without changing the installed
+app; use `SPACES_ALLOW_ADHOC=1 ./install.sh` only if you accept repeated
+permission prompts. If switching away from a previous ad-hoc signature, remove
+the old **Spaces** entry in macOS Privacy & Security → Accessibility, re-add the
+installed `/Applications/Spaces.app`, approve it, and relaunch Spaces once.
+
+An old **SpaceSwitcher** permission entry comes from an earlier development
+build and can be removed manually with the minus button. No installer should
+silently modify macOS privacy approvals or reset TCC data.
+
 ### Grant Accessibility access
 
 On first launch, macOS will prompt you to grant Accessibility access in **System Settings > Privacy & Security > Accessibility**. This is required for simulating the keyboard shortcuts that switch desktops.
