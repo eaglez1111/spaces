@@ -46,8 +46,29 @@ PLIST="$TEMP_APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $PROD_NAME" "$PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleName $PROD_NAME" "$PLIST"
 
-# Re-sign after modifying the plist
-codesign --force --sign - "$TEMP_APP"
+# Re-sign after modifying the plist. The old ad-hoc signature changed
+# identity with each build, so macOS repeatedly invalidated Accessibility.
+# Set SPACES_SIGNING_IDENTITY to a stable certificate name or SHA-1, or use
+# a single installed Apple Development/Developer ID Application identity.
+SIGNING_IDENTITY="${SPACES_SIGNING_IDENTITY:-}"
+if [[ -z "$SIGNING_IDENTITY" ]]; then
+    SIGNING_CANDIDATES=$(security find-identity -v -p codesigning 2>/dev/null |
+        grep -E '"(Apple Development:|Developer ID Application:|Spaces Local Signing)' |
+        awk '{print $2}' || true)
+    if [[ $(printf '%s\n' "$SIGNING_CANDIDATES" | sed '/^$/d' | wc -l | tr -d ' ') == "1" ]]; then
+        SIGNING_IDENTITY="$SIGNING_CANDIDATES"
+    fi
+fi
+
+if [[ -n "$SIGNING_IDENTITY" ]]; then
+    echo "Signing with stable certificate: $SIGNING_IDENTITY"
+    codesign --force --sign "$SIGNING_IDENTITY" "$TEMP_APP"
+else
+    echo "WARNING: No stable signing certificate available. Accessibility may need reapproval after updates."
+    echo "Create a persistent Code Signing certificate, then set SPACES_SIGNING_IDENTITY to its name or SHA-1."
+    codesign --force --sign - "$TEMP_APP"
+fi
+codesign --verify --deep --strict "$TEMP_APP"
 
 # Install to /Applications
 echo "Installing to $DEST..."

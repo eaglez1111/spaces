@@ -99,20 +99,38 @@ enum SpaceSwitcherService {
             if !flags.contains(.maskAlternate) && !flags.contains(.maskCommand) {
                 return true
             }
-            try? await Task.sleep(for: .milliseconds(20))
+            try? await Task.sleep(for: .milliseconds(10))
         }
         logger.warning("Modifier keys remained pressed; skipping synthetic shortcut")
         return false
     }
 
-    /// Fast first pass across all monitors, followed by ONE bounded
-    /// verification/retry for missed displays. Never block each monitor
-    /// for 380ms or allow several retry waves to stack.
+    /// Poll for the actual target Space IDs, returning early on fast systems.
+    /// Never wait an entire animation interval when switching already finished.
+    @MainActor
+    private static func waitUntilReached(
+        _ targets: [Target], generation: Int, maxMilliseconds: Int
+    ) async -> Bool {
+        let end = ProcessInfo.processInfo.systemUptime +
+            Double(maxMilliseconds) / 1000.0
+        repeat {
+            guard generation == latestSwitch, !Task.isCancelled else { return false }
+            let current = getCurrentSpacePerDisplay()
+            if targets.allSatisfy({ current[$0.displayUUID] == $0.spaceID }) {
+                return true
+            }
+            if ProcessInfo.processInfo.systemUptime >= end { break }
+            try? await Task.sleep(for: .milliseconds(12))
+        } while true
+        return false
+    }
+
+    /// Fast first pass, followed by at most one retry for displays which
+    /// still have not changed. A newer user action cancels any pending retry.
     @MainActor
     private static func switchTargets(_ targets: [Target], generation: Int) async {
         guard !targets.isEmpty,
               await waitForModifiersToRelease(generation: generation) else { return }
-
         for attempt in 1...2 {
             guard generation == latestSwitch, !Task.isCancelled else { return }
             let current = getCurrentSpacePerDisplay()
@@ -126,12 +144,12 @@ enum SpaceSwitcherService {
                 }
                 if systemShortcutEnabled(target.desktopNumber) == false {
                     logger.warning(
-                        "Switch to Desktop \(target.desktopNumber) is disabled in Mission Control keyboard shortcuts; cannot switch this monitor"
+                        "Switch to Desktop \\(target.desktopNumber) is disabled in Mission Control keyboard shortcuts"
                     )
                     continue
                 }
                 guard let mapping = KeyCodes.keyMapping(for: target.desktopNumber) else {
-                    logger.warning("Unsupported Desktop \(target.desktopNumber) shortcut")
+                    logger.warning("Unsupported Desktop \\(target.desktopNumber) shortcut")
                     continue
                 }
                 _ = postKeystroke(
@@ -139,17 +157,21 @@ enum SpaceSwitcherService {
                     keyCode: mapping.keyCode,
                     flags: mapping.flags
                 )
-                // Short separation; never wait a whole animation per monitor.
-                try? await Task.sleep(for: .milliseconds(18))
+                try? await Task.sleep(for: .milliseconds(10))
             }
-            // Give WindowServer one animation interval to settle before a retry.
-            try? await Task.sleep(for: .milliseconds(attempt == 1 ? 200 : 160))
+
+            // A first-pass timeout is long enough for native animations while
+            // still much quicker on machines where WindowServer settles early.
+            if await waitUntilReached(
+                targets, generation: generation,
+                maxMilliseconds: attempt == 1 ? 180 : 150
+            ) { return }
         }
 
         let final = getCurrentSpacePerDisplay()
         for target in targets where final[target.displayUUID] != target.spaceID {
             logger.warning(
-                "Display \(target.displayUUID, privacy: .public) did not reach Desktop \(target.desktopNumber). Check Mission Control Switch to Desktop \(target.desktopNumber) shortcut."
+                "Display \\(target.displayUUID, privacy: .public) did not reach Desktop \\(target.desktopNumber)"
             )
         }
     }
@@ -171,7 +193,7 @@ enum SpaceSwitcherService {
         logger.info("  Posting keyDown (keyCode=\(keyCode), flags=0x\(flagsHex, privacy: .public)) to .cghidEventTap")
         keyDown.post(tap: .cghidEventTap)
 
-        usleep(12_000) // Short native key press; avoid unnecessary delay
+        usleep(8_000) // Short native key press; avoid unnecessary delay
 
         keyUp.flags = flags
         logger.info("  Posting keyUp to .cghidEventTap")

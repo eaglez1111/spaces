@@ -105,17 +105,23 @@ struct GeneralSettingsView: View {
             Section("Startup") {
                 LaunchAtLogin.Toggle("Launch at login")
             }
-            if !accessibilityGranted {
-                Section("Permission") {
-                    LabeledContent("Accessibility") {
-                        Button("Open System Settings…") {
-                            AccessibilityManager.openSettings()
+            Section("Permissions") {
+                LabeledContent("Accessibility") {
+                    if accessibilityGranted {
+                        Label("Granted", systemImage: "checkmark.circle")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        HStack(spacing: 12) {
+                            Text("Not granted")
+                                .foregroundStyle(.orange)
+                            Button("Open Settings…") {
+                                AccessibilityManager.openSettings()
+                            }
                         }
                     }
                 }
-            } else if keyboardHookFailed {
-                Section("Keyboard access") {
-                    LabeledContent("Cmd+Tab couldn't start") {
+                if keyboardHookFailed && accessibilityGranted {
+                    LabeledContent("Keyboard access") {
                         Button("Input Monitoring…") {
                             if let url = URL(string:
                                 "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
@@ -135,11 +141,11 @@ struct GeneralSettingsView: View {
             for: NSApplication.didBecomeActiveNotification
         )) { _ in
             let granted = AccessibilityManager.isTrusted
-            if granted && !accessibilityGranted {
+            if granted != accessibilityGranted {
+                accessibilityGranted = granted
                 appState.refreshDockLock()
                 NotificationCenter.default.post(name: .commandTabSettingChanged, object: nil)
             }
-            accessibilityGranted = granted
         }
     }
 }

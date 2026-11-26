@@ -183,8 +183,18 @@ Accessibility must be granted to the actual production bundle at
 invalidate its old Accessibility approval. In Privacy & Security →
 Accessibility, remove obsolete SpaceSwitcher and Spaces entries, add the
 installed Spaces.app, and toggle it on. Quit and relaunch the application
-before testing. Settings offers a button to open macOS permissions only
-when Accessibility is missing, with Input Monitoring troubleshooting if Cmd+Tab fails.
+before testing. Settings always displays the current Accessibility grant in a neutral
+status row, and offers a System Settings button if permission is missing.
+Input Monitoring troubleshooting is shown only if Cmd+Tab interception fails.
+
+For permission persistence across reinstallations, use a consistent code-signing
+certificate (Apple Development, Developer ID Application, or a local self-signed
+Code Signing certificate named **Spaces Local Signing**). The installer automatically
+uses it if exactly one qualifying valid identity is available. To choose explicitly,
+run `SPACES_SIGNING_IDENTITY="certificate name or SHA-1" ./install.sh`.
+Without one, the installer falls back to ad-hoc signing, which can invalidate
+the Accessibility grant after every code change. Switching to a stable signer
+may require granting Accessibility one final time.
 
 ### Shortcuts and safe installation
 

@@ -52,6 +52,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             self?.appGroupSwitcher?.handle(action)
         }
+        commandTab.onCycleGroup = { [weak self] in
+            self?.cycleOnHotkey(by: 1)
+        }
         commandTab.onError = { [weak self] reason in
             self?.appState.commandTabStatus = reason
         }

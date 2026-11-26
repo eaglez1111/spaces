@@ -1,6 +1,7 @@
 import AppKit
 import CoreGraphics
 import Darwin
+import KeyboardShortcuts
 
 // The system Dock consumes Cmd+Tab before ordinary global hotkey handlers see it.
 // The two native symbolic hotkeys are disabled ONLY while this event tap is active.
@@ -23,6 +24,7 @@ final class CommandTabInterceptor {
     }
 
     var onAction: (@MainActor (Action) -> Void)?
+    var onCycleGroup: (@MainActor () -> Void)?
     var onError: (@MainActor (String) -> Void)?
     private(set) var lastStartError = ""
     private var tap: CFMachPort?
@@ -110,6 +112,12 @@ final class CommandTabInterceptor {
         }
     }
 
+    private func notifyCycleGroup() {
+        DispatchQueue.main.async { [weak self] in
+            self?.onCycleGroup?()
+        }
+    }
+
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             // Do not tear down the CFMachPort while inside its own callback.
@@ -135,6 +143,22 @@ final class CommandTabInterceptor {
 
         let code = event.getIntegerValueField(.keyboardEventKeycode)
         let isDown = type == .keyDown
+
+        // While this tap owns Cmd+Tab, handle the configured Option+Tab group
+        // shortcut here too. On some macOS builds the Carbon registration
+        // misses this combination while a second keyboard tap is active.
+        // Respect custom bindings; don't steal Option+Tab from other apps.
+        if !cycling && code == 48 &&
+            event.flags.contains(.maskAlternate) &&
+            !event.flags.contains(.maskCommand) &&
+            KeyboardShortcuts.getShortcut(for: .cycleGroup) ==
+                KeyboardShortcuts.Shortcut(.tab, modifiers: .option) {
+            if isDown &&
+                event.getIntegerValueField(.keyboardEventAutorepeat) == 0 {
+                notifyCycleGroup()
+            }
+            return nil
+        }
 
         if !cycling {
             guard code == 48 && event.flags.contains(.maskCommand) else {
