@@ -191,3 +191,22 @@ appear. The existing Space-group overlay (Option+Space) and group shortcuts
 
 The two initial automatic groups now default to the existing **Work** (Taxi)
 and **Personal** (Sent-From-Computer) icons; extra groups are named Group N.
+
+
+### App switcher layout and installation defaults
+
+The Cmd+Tab overlay now uses macOS-style **horizontal icon tiles**, one row
+per automatically generated Space group (two groups = two rows). The Space
+groups themselves are unlabeled in this overlay; only the selected app's name
+appears beneath the icons. Each app appears once per group, even if it has
+several windows there. Cmd+Tab navigation, group switching, and focus behavior
+are unchanged.
+
+Automatic groups are now labeled **1, 2, 3, ...** and all use the original
+**Labtop** computer icon. On fresh installs (and only when a preference has
+never been saved), these settings default to on: group swipe-follow,
+single-window app-follow, Cmd+Tab replacement, bottom Dock lock, and launch at
+login. The default dock target is the center display in a three-monitor
+arrangement; otherwise it falls back to the main display. Shortcut defaults:
+Option+Space for the existing group overlay, Option+Left/Right to change
+groups, and Option+Tab to cycle groups. User-customized settings remain intact.

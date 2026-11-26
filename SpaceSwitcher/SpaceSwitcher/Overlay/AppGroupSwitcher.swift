@@ -81,63 +81,81 @@ final class AppGroupSwitcherSelection {
     var selectedIndex = 0
 }
 
+/// macOS-style icon tiles: one horizontal row for each Space group.
+/// The selected app's name appears once below the icons, with no group labels.
 struct AppGroupSwitcherView: View {
     @Bindable var selection: AppGroupSwitcherSelection
+    let groupCount: Int
     let onChoose: (AppGroupEntry) -> Void
+
+    private let tileWidth: CGFloat = 74
+    private let tileHeight: CGFloat = 78
+    private let tileGap: CGFloat = 8
+
+    private var longestRow: Int {
+        (0..<groupCount).map { groupIndex in
+            selection.entries.filter { $0.groupIndex == groupIndex }.count
+        }.max() ?? 0
+    }
+
+    private var stripWidth: CGFloat {
+        min(max(CGFloat(longestRow) * (tileWidth + tileGap) + 20, 250), 1000)
+    }
+
+    private var stripHeight: CGFloat {
+        min(CGFloat(max(groupCount, 1)) * tileHeight
+            + CGFloat(max(groupCount - 1, 0)) * 10 + 24, 520)
+    }
+
+    private var selectedEntry: AppGroupEntry? {
+        guard selection.entries.indices.contains(selection.selectedIndex) else { return nil }
+        return selection.entries[selection.selectedIndex]
+    }
 
     var body: some View {
         ScrollViewReader { scroller in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(Array(Set(selection.entries.map(\.groupIndex)).sorted()), id: \.self) { group in
-                        let entries = selection.entries.filter { $0.groupIndex == group }
-                        if let first = entries.first {
-                            Text(first.groupName)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.65))
-                                .padding(.top, 4)
-                                .padding(.horizontal, 8)
-                        }
-
-                        ForEach(entries) { entry in
-                            let isSelected = selection.entries.indices.contains(selection.selectedIndex)
-                                && selection.entries[selection.selectedIndex].id == entry.id
-                            Button {
-                                onChoose(entry)
-                            } label: {
-                                HStack(spacing: 12) {
-                                    if let icon = entry.icon {
-                                        Image(nsImage: icon)
-                                            .resizable()
-                                            .frame(width: 26, height: 26)
-                                    } else {
-                                        Image(systemName: "app")
-                                            .frame(width: 26, height: 26)
-                                    }
-                                    Text(entry.appName)
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(.white)
-                                    Spacer()
-                                    if isSelected {
-                                        Image(systemName: "return")
-                                            .font(.caption)
-                                            .foregroundStyle(.white.opacity(0.75))
-                                    }
-                                }
-                                .padding(.horizontal, 12)
-                                .frame(height: 40)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 9)
-                                        .fill(isSelected ? Color.white.opacity(0.22) : Color.clear)
-                                )
+            VStack(spacing: 8) {
+                ScrollView([.horizontal, .vertical]) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(0..<groupCount, id: \.self) { groupIndex in
+                            let rowEntries = selection.entries.filter {
+                                $0.groupIndex == groupIndex
                             }
-                            .buttonStyle(.plain)
-                            .id(entry.id)
+                            HStack(spacing: tileGap) {
+                                ForEach(rowEntries) { entry in
+                                    let isSelected = selectedEntry?.id == entry.id
+                                    Button {
+                                        onChoose(entry)
+                                    } label: {
+                                        GroupedAppIcon(entry: entry, isSelected: isSelected)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help(entry.appName)
+                                    .accessibilityLabel(entry.appName)
+                                    .id(entry.id)
+                                }
+                                if rowEntries.isEmpty {
+                                    Color.clear.frame(width: tileWidth, height: tileHeight)
+                                }
+                            }
+                            .frame(height: tileHeight)
                         }
                     }
+                    .padding(12)
                 }
-                .padding(14)
+                .frame(width: stripWidth, height: stripHeight)
+
+                Text(selectedEntry?.appName ?? "")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(1)
+                    .frame(width: stripWidth)
             }
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(white: 0.17).opacity(0.96))
+            )
             .onChange(of: selection.selectedIndex) { _, index in
                 guard selection.entries.indices.contains(index) else { return }
                 withAnimation(.easeOut(duration: 0.10)) {
@@ -145,10 +163,36 @@ struct AppGroupSwitcherView: View {
                 }
             }
         }
-        .frame(width: 380, height: min(CGFloat(selection.entries.count * 44 + 95), 520))
+    }
+}
+
+private struct GroupedAppIcon: View {
+    let entry: AppGroupEntry
+    let isSelected: Bool
+
+    var body: some View {
+        Group {
+            if let icon = entry.icon {
+                Image(nsImage: icon)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 54, height: 54)
+            } else {
+                Image(systemName: "app")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 44, height: 44)
+                    .foregroundStyle(.white)
+            }
+        }
+        .frame(width: 74, height: 78)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(white: 0.17))
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isSelected ? Color.white.opacity(0.20) : .clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.white.opacity(isSelected ? 0.28 : 0), lineWidth: 1)
         )
     }
 }
@@ -241,7 +285,9 @@ final class AppGroupSwitcherController {
             selection.selectedIndex = reverse ? entries.count - 1 : 0
         }
 
-        let view = AppGroupSwitcherView(selection: selection) { [weak self] entry in
+        let view = AppGroupSwitcherView(
+            selection: selection, groupCount: appState.groups.count
+        ) { [weak self] entry in
             self?.select(entry)
         }
         let hosting = NSHostingView(rootView: view)

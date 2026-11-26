@@ -1,13 +1,13 @@
 import AppKit
 import KeyboardShortcuts
+import LaunchAtLogin
 
 extension KeyboardShortcuts.Name {
     static let toggleOverlay = Self("toggleOverlay", default: .init(.space, modifiers: .option))
     // Ctrl+arrows are intercepted by macOS unless Mission Control bindings are disabled.
-    static let previousGroup = Self("previousGroup", default: .init(.leftArrow, modifiers: .control))
-    static let nextGroup = Self("nextGroup", default: .init(.rightArrow, modifiers: .control))
-    // Optional: assign Option+Tab from Settings to cycle groups without an overlay.
-    static let cycleGroup = Self("cycleGroup")
+    static let previousGroup = Self("previousGroup", default: .init(.leftArrow, modifiers: .option))
+    static let nextGroup = Self("nextGroup", default: .init(.rightArrow, modifiers: .option))
+    static let cycleGroup = Self("cycleGroup", default: .init(.tab, modifiers: .option))
 }
 
 extension Notification.Name {
@@ -26,6 +26,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Also recovers the system switcher after a previous crash.
         CommandTabInterceptor.restoreNativeSwitcher()
+
+        // Enable launch at login once on a fresh installation only.
+        // Subsequent user choices in Settings are never overwritten.
+        if UserDefaults.standard.object(forKey: "didSetLaunchAtLoginDefault") == nil {
+            LaunchAtLogin.isEnabled = true
+            UserDefaults.standard.set(true, forKey: "didSetLaunchAtLoginDefault")
+        }
 
         // Prompt for accessibility access only if not already granted
         AccessibilityManager.checkAndPrompt()
@@ -144,8 +151,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if commandTab.start() {
             appState.commandTabStatus = "App icons grouped by Space"
         } else {
-            appState.commandTabStatus = "Unavailable: check Accessibility permission"
-            appState.replaceCommandTab = false
+            // Keep the requested preference; the system switcher remains available.
+            // Retry when the user reopens Spaces with Accessibility permission.
+            appState.commandTabStatus = "Unavailable: check Accessibility, then relaunch Spaces"
         }
     }
 

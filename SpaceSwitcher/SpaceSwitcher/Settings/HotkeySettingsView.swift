@@ -15,7 +15,7 @@ struct HotkeySettingsView: View {
         LabeledContent("Cycle Groups (optional):") {
             KeyboardShortcuts.Recorder(for: .cycleGroup)
         }
-        Text("To use Control+Left/Right, disable the corresponding macOS Mission Control keyboard shortcuts.")
+        Text("Defaults: Option+Space, Option+Left/Right, Option+Tab. Change any shortcut above.")
             .font(.caption).foregroundStyle(.secondary)
     }
 }

@@ -8,7 +8,7 @@ final class AppState {
     var monitors: [MonitorInfo] = []
     var activeGroupID: UUID?
 
-    var followEnabled: Bool = UserDefaults.standard.bool(forKey: "gestureFollowEnabled") {
+    var followEnabled: Bool = (UserDefaults.standard.object(forKey: "gestureFollowEnabled") as? Bool) ?? true {
         didSet { UserDefaults.standard.set(followEnabled, forKey: "gestureFollowEnabled") }
     }
 
@@ -18,8 +18,8 @@ final class AppState {
         didSet { UserDefaults.standard.set(followActivatedAppEnabled, forKey: "followActivatedAppEnabled") }
     }
 
-    // Cmd+Tab takeover is off until the user explicitly enables it.
-    var replaceCommandTab: Bool = UserDefaults.standard.bool(forKey: "replaceCommandTab") {
+    // Enabled on new installs; existing user choices remain persisted.
+    var replaceCommandTab: Bool = (UserDefaults.standard.object(forKey: "replaceCommandTab") as? Bool) ?? true {
         didSet {
             UserDefaults.standard.set(replaceCommandTab, forKey: "replaceCommandTab")
             NotificationCenter.default.post(name: .commandTabSettingChanged, object: nil)
@@ -27,8 +27,8 @@ final class AppState {
     }
     var commandTabStatus: String = "Native macOS switcher"
 
-    // Dock lock is opt-in. An empty selection is initialized to the main display.
-    var dockLockEnabled: Bool = UserDefaults.standard.bool(forKey: "dockLockEnabled") {
+    // Enabled on new installs; an unset monitor defaults to the middle screen.
+    var dockLockEnabled: Bool = (UserDefaults.standard.object(forKey: "dockLockEnabled") as? Bool) ?? true {
         didSet {
             UserDefaults.standard.set(dockLockEnabled, forKey: "dockLockEnabled")
             refreshDockLock()
@@ -52,11 +52,13 @@ final class AppState {
 
     init() {
         refreshMonitors()
-        // Use the primary display until the user chooses a different monitor.
+        // Prefer the middle monitor for three or more displays, as in the
+        // default three-display VITURE setup; otherwise use the primary one.
         if dockLockDisplayUUID.isEmpty {
-            dockLockDisplayUUID = monitors.first(where: {
-                $0.displayID == NSScreen.screens.first?.displayID
-            })?.displayUUID ?? monitors.first?.displayUUID ?? ""
+            let preferred = monitors.count >= 3
+                ? monitors[monitors.count / 2]
+                : monitors.first(where: { $0.displayID == NSScreen.screens.first?.displayID })
+            dockLockDisplayUUID = preferred?.displayUUID ?? monitors.first?.displayUUID ?? ""
         }
         refreshDockLock()
         lastCurrentSpaces = SpaceSwitcherService.getCurrentSpacePerDisplay()
@@ -160,9 +162,7 @@ final class AppState {
 
         groups = positions.enumerated().map { groupIndex, indices in
             let id = groupIndex < existing.count ? existing[groupIndex].id : UUID()
-            let label = groupIndex == 0 ? "Work" : groupIndex == 1 ? "Personal" : "Group \(groupIndex + 1)"
-            let icon = groupIndex == 0 ? "Taxi" : groupIndex == 1 ? "Sent-From-Computer" : "Labtop"
-            var group = DesktopGroup(id: id, name: label, icon: icon)
+            var group = DesktopGroup(id: id, name: String(groupIndex + 1), icon: "Labtop")
             for (monitorIndex, spaceIndex) in indices.enumerated() {
                 if let spaceIndex {
                     group.setSpaceIndex(spaceIndex, on: monitors[monitorIndex])
