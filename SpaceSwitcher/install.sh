@@ -58,7 +58,4 @@ mv "$TEMP_APP" "$DEST"
 # Accessibility permissions. The user can explicitly launch the app later.
 /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f "$DEST"
 
-echo "Installed Spaces. It was NOT launched."
-echo "Accessibility permissions may need to be renewed after this ad-hoc re-sign."
-echo "If permission is missing, re-add /Applications/Spaces.app in Privacy & Security > Accessibility."
-echo "Cmd+Tab and Dock lock settings are saved across relaunches."\necho "If Cmd+Tab remains native, check the diagnostic status and Input Monitoring permission."
+echo "Installed Spaces. Open /Applications/Spaces.app to start it."
