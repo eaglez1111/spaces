@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var appGroupSwitcher: AppGroupSwitcherController?
     private let commandTab = CommandTabInterceptor()
     private var terminationSource: DispatchSourceSignal?
+    private var lastGroupKeyAt: TimeInterval = -10
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Restore native shortcuts even if a previous Spaces build crashed.
@@ -73,14 +74,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Globally switch group directly. The action wraps at the ends.
-        KeyboardShortcuts.onKeyUp(for: .previousGroup) { [weak self] in
-            Task { @MainActor in self?.appState.cycleGroup(by: -1) }
+        // Fire on key DOWN so releasing Option before Tab cannot lose the
+        // group-change command. Debounce accidental key repeat.
+        KeyboardShortcuts.onKeyDown(for: .previousGroup) { [weak self] in
+            Task { @MainActor in self?.cycleOnHotkey(by: -1) }
         }
-        KeyboardShortcuts.onKeyUp(for: .nextGroup) { [weak self] in
-            Task { @MainActor in self?.appState.cycleGroup(by: 1) }
+        KeyboardShortcuts.onKeyDown(for: .nextGroup) { [weak self] in
+            Task { @MainActor in self?.cycleOnHotkey(by: 1) }
         }
-        KeyboardShortcuts.onKeyUp(for: .cycleGroup) { [weak self] in
-            Task { @MainActor in self?.appState.cycleGroup(by: 1) }
+        KeyboardShortcuts.onKeyDown(for: .cycleGroup) { [weak self] in
+            Task { @MainActor in self?.cycleOnHotkey(by: 1) }
         }
         KeyboardShortcuts.onKeyUp(for: .appPicker) { [weak self] in
             Task { @MainActor in
@@ -153,6 +156,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+    }
+
+    private func cycleOnHotkey(by offset: Int) {
+        let now = ProcessInfo.processInfo.systemUptime
+        guard now - lastGroupKeyAt >= 0.15 else { return }
+        lastGroupKeyAt = now
+        appState.cycleGroup(by: offset)
     }
 
     @objc private func showOverlay() {
