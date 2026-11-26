@@ -17,6 +17,12 @@ final class DockEdgeGuard {
     @discardableResult
     func configure(enabled: Bool, selectedDisplayUUID: String) -> String {
         stop()
+        // Safety rollback: this session-wide pointer tap must not run until
+        // the full-system input freeze is understood and tested separately.
+        let suspendedForSafety = true
+        guard !suspendedForSafety else {
+            return "Temporarily disabled for stability"
+        }
         guard enabled else { return "Off" }
         let screens = NSScreen.screens
         guard screens.count > 1 else { return "Only one monitor connected" }

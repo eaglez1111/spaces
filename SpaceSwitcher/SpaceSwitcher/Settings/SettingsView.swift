@@ -68,9 +68,9 @@ struct GeneralSettingsView: View {
                     VStack(alignment: .leading, spacing: 9) {
                         LaunchAtLogin.Toggle("Launch at login")
                         Toggle("Replace Cmd+Tab with apps grouped by Space",
-                               isOn: Binding(get: { appState.replaceCommandTab },
-                                             set: { appState.replaceCommandTab = $0 }))
-                        Text("Cmd+Tab: \(appState.commandTabStatus). Release Command to select; Esc cancels.")
+                               isOn: .constant(false))
+                            .disabled(true)
+                        Text("Cmd+Tab: \(appState.commandTabStatus). Native macOS switching is restored.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -98,8 +98,8 @@ struct GeneralSettingsView: View {
                 GroupBox("Dock") {
                     VStack(alignment: .leading, spacing: 9) {
                         Toggle("Keep Dock at bottom of one monitor",
-                               isOn: Binding(get: { appState.dockLockEnabled },
-                                             set: { appState.dockLockEnabled = $0 }))
+                               isOn: .constant(false))
+                            .disabled(true)
                         Picker("Dock monitor", selection: Binding(
                             get: { appState.dockLockDisplayUUID },
                             set: { appState.dockLockDisplayUUID = $0 }
@@ -109,10 +109,11 @@ struct GeneralSettingsView: View {
                                     .tag(monitor.displayUUID)
                             }
                         }
-                        Text("Dock lock: \(appState.dockLockStatus). Move the Dock to the selected monitor first. Hold Option to bypass.")
+                        Text("Dock lock: \(appState.dockLockStatus). Input interception is paused after the reported system freeze.")
                             .font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                         Button("Refresh Dock lock") { appState.refreshDockLock() }
+                            .disabled(true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(6)

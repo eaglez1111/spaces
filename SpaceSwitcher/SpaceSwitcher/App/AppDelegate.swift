@@ -149,19 +149,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // Safety rollback: never install the global keyboard interception tap.
+    // Preserve the implementation for a future isolated, tested redesign.
     @objc private func configureCommandTab() {
         commandTab.stop()
-        guard appState.replaceCommandTab else {
-            appState.commandTabStatus = "Native macOS switcher"
-            return
-        }
-        if commandTab.start() {
-            appState.commandTabStatus = "App icons grouped by Space"
-        } else {
-            // Keep the requested preference; the system switcher remains available.
-            // Retry when the user reopens Spaces with Accessibility permission.
-            appState.commandTabStatus = "Unavailable: check Accessibility, then relaunch Spaces"
-        }
+        appState.commandTabStatus = "Temporarily disabled for stability"
     }
 
     func applicationWillTerminate(_ notification: Notification) {
