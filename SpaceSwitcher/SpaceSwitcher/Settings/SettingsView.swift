@@ -53,6 +53,7 @@ struct GroupsSettingsView: View {
 
 struct GeneralSettingsView: View {
     @Environment(AppState.self) var appState
+    @State private var accessibilityGranted = false
 
     var body: some View {
         // Scroll instead of clipping the last options inside a fixed-height Form.
@@ -67,14 +68,46 @@ struct GeneralSettingsView: View {
                 GroupBox("Startup and app switching") {
                     VStack(alignment: .leading, spacing: 9) {
                         LaunchAtLogin.Toggle("Launch at login")
-                        Toggle("Enable cross-Space app picker",
-                               isOn: Binding(get: { appState.appPickerEnabled },
-                                             set: { appState.appPickerEnabled = $0 }))
-                        Text("Option+Shift+Tab opens an app picker with one row per Space. Left/Right or Tab chooses an app; Up/Down changes rows; Return selects; Esc closes. Native Cmd+Tab is unchanged.")
+                        Toggle("Replace Cmd+Tab with cross-Space app picker",
+                               isOn: Binding(get: { appState.replaceCommandTab },
+                                             set: { appState.replaceCommandTab = $0 }))
+                        Text("Cmd+Tab: \(appState.commandTabStatus). Hold Command and tap Tab (or Shift+Tab); release Command to select; Esc cancels.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text("Off by default for independent testing after the previous freeze.")
+                        Toggle("Enable Option+Shift+Tab picker shortcut (preview)",
+                               isOn: Binding(get: { appState.appPickerEnabled },
+                                             set: { appState.appPickerEnabled = $0 }))
+                        Text("The same picker shows one horizontal row for each Space group. Both features are off on every launch until you opt in.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(6)
+                }
+
+                GroupBox("Accessibility permission") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Spaces permission:")
+                            Text(accessibilityGranted ? "Granted" : "Not granted to this running build")
+                                .foregroundStyle(accessibilityGranted ? .green : .orange)
+                            Spacer()
+                        }
+                        HStack {
+                            Button("Open Accessibility Settings") {
+                                AccessibilityManager.openSettings()
+                            }
+                            Button("Recheck Permission") {
+                                accessibilityGranted = AccessibilityManager.isTrusted
+                                appState.refreshDockLock()
+                                NotificationCenter.default.post(
+                                    name: .commandTabSettingChanged, object: nil
+                                )
+                            }
+                        }
+                        Text("If you already enabled access but this still says Not granted: remove outdated Spaces/SpaceSwitcher entries in Privacy & Security → Accessibility, add /Applications/Spaces.app, enable it, then quit and relaunch Spaces. Re-signing during installation can invalidate prior approval.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -113,7 +146,7 @@ struct GeneralSettingsView: View {
                                     .tag(monitor.displayUUID)
                             }
                         }
-                        Text("Dock lock: \(appState.dockLockStatus). Test separately after the app picker. Move the Dock to the selected monitor first; hold Option to bypass.")
+                        Text("Dock lock: \(appState.dockLockStatus). Requires Accessibility. Select the monitor with the existing Dock, then enable; hold Option to bypass. Toggle off if pointer movement becomes abnormal.")
                             .font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                         Button("Refresh Dock lock") { appState.refreshDockLock() }
@@ -124,6 +157,9 @@ struct GeneralSettingsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(18)
+        }
+        .onAppear {
+            accessibilityGranted = AccessibilityManager.isTrusted
         }
     }
 }

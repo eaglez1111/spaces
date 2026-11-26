@@ -165,38 +165,49 @@ screen; place it first, then enable the toggle. Source technique adapted
 from DockPin (MIT license, Copyright 2026 Meti Kadriu, see THIRD_PARTY_NOTICES.md).
 
 
-### Cross-Space app picker (native Cmd+Tab is untouched)
+### Cross-Space app picker (opt-in Cmd+Tab replacement)
 
-After the previous system input freeze, the app picker is now independent of
-macOS Cmd+Tab, and disabled by default until the user explicitly enables it in
-Settings → General. By default **Option+Shift+Tab** opens a small app-icon picker.
+**Cmd+Tab** can open a custom cross-Space app switcher. This replaces the native
+app switcher only while the user enables it in Settings → General. It is OFF
+every time the application launches, so a system freeze cannot persist across
+restarts. macOS Cmd+Tab is restored whenever the toggle is switched off or the
+app quits normally. A separate Option+Shift+Tab shortcut can preview the same
+picker without taking over the native Cmd+Tab behavior.
 
-The picker shows **one horizontal row per automatic Space group**: Space 1 in
-the first row, Space 2 directly beneath it, and so on. No group labels or
-separate group icons; just one icon per app per group. Chrome can appear in
-both rows when it has windows in both Spaces. An empty row is shown as
-"No detected apps" rather than allowing rows to collapse together.
+The overlay shows one horizontal row per automatic Space group: the first
+row for Space 1, the second directly beneath it for Space 2, etc. No group
+labels or group icons; one icon per app per group. Hold Command, tap Tab or
+Shift+Tab to select, and release Command to switch. Escape cancels. The chosen
+app's Space group becomes active on all connected monitors before its window
+is raised. The picker appears on the selected Dock monitor.
 
-Navigate with Left/Right (within a row), Up/Down (between rows), or Tab
-(among apps), Enter to select, and Escape to cancel. The selected app's Space
-group becomes active on all monitors before the relevant app window is raised.
-The picker always appears on the monitor selected under Dock monitor.
+All window-to-Space membership queries run in a bounded, background task:
+no expensive queries occur inside the system keyboard event-tap callback.
+The window inventory uses a read-only private SkyLight API, so protected,
+minimized, or unusual windows can be missing.
 
-The picker runs its bounded, user-triggered window inventory away from the
-main/input thread. It uses the existing read-only private SkyLight Space
-membership function; some minimized, fullscreen-only, or inaccessible
-windows may not be detected. **It does not disable or intercept native Cmd+Tab.**
+**Dock lock**, separately enabled in Settings, is likewise off every launch.
+It needs Accessibility permission and a bottom-positioned Dock. It may prevent
+Dock migration when the mouse reaches another monitor's bottom edge. If its
+mouse tap times out it stays disabled instead of re-enabling itself.
 
-The Dock monitor lock is also **off by default after recovery**, with a separate
-toggle under General settings. This opt-in input guard can keep the Dock
-on one screen; it disables itself on event-tap timeout instead of repeatedly
-re-enabling. Hold Option to bypass deliberately.
+### Accessibility and reinstall behavior
+
+Accessibility must be granted to the actual production bundle at
+`/Applications/Spaces.app`. When an ad-hoc signed app is rebuilt, macOS may
+invalidate its old Accessibility approval. In Privacy & Security →
+Accessibility, remove obsolete SpaceSwitcher and Spaces entries, add the
+installed Spaces.app, and toggle it on. Quit and relaunch the application
+before testing. The app no longer repeatedly presents accessibility prompts
+on hotkey or Space changes; its Settings show a passive trust indicator and
+an explicit button to open system settings.
 
 ### Shortcuts and safe installation
 
 Default shortcuts: Option+Space (group overlay), Option+Left/Right (previous/
-next group), Option+Tab (cycle groups), and Option+Shift+Tab (cross-Space
-application picker). Each shortcut is editable in Settings.
+next group), Option+Tab (cycle groups), and Option+Shift+Tab (optional app
+picker preview). Enable custom Cmd+Tab separately in Settings. Each recording
+shortcut is editable in Settings.
 
 Automatic groups are numbered **1, 2, 3, ...**, all with the original
 computer icon. Swipe-follow and single-window activated-app following remain
@@ -205,5 +216,5 @@ independently configurable.
 After the previous system freeze, the installer stops the actual
 `SpaceSwitcher` executable before replacing `/Applications/Spaces.app`.
 It no longer restarts Dock, resets Accessibility permissions, or automatically
-launches the updated app. The two experimental options start disabled for
-both new and previously configured users until explicitly enabled.
+launches the updated app. The two input-interception options start disabled on every application
+launch, until explicitly enabled for that session.
