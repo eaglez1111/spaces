@@ -3,19 +3,27 @@ import KeyboardShortcuts
 
 struct HotkeySettingsView: View {
     var body: some View {
-        LabeledContent("Overlay Hotkey:") {
-            KeyboardShortcuts.Recorder(for: .toggleOverlay)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Group overlay").frame(width: 150, alignment: .leading)
+                KeyboardShortcuts.Recorder(for: .toggleOverlay)
+            }
+            HStack {
+                Text("Previous group").frame(width: 150, alignment: .leading)
+                KeyboardShortcuts.Recorder(for: .previousGroup)
+            }
+            HStack {
+                Text("Next group").frame(width: 150, alignment: .leading)
+                KeyboardShortcuts.Recorder(for: .nextGroup)
+            }
+            HStack {
+                Text("Cycle groups").frame(width: 150, alignment: .leading)
+                KeyboardShortcuts.Recorder(for: .cycleGroup)
+            }
+            Text("Defaults: Option+Space, Option+Left/Right, Option+Tab.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        LabeledContent("Previous Group:") {
-            KeyboardShortcuts.Recorder(for: .previousGroup)
-        }
-        LabeledContent("Next Group:") {
-            KeyboardShortcuts.Recorder(for: .nextGroup)
-        }
-        LabeledContent("Cycle Groups (optional):") {
-            KeyboardShortcuts.Recorder(for: .cycleGroup)
-        }
-        Text("To use Control+Left/Right, disable the corresponding macOS Mission Control keyboard shortcuts.")
-            .font(.caption).foregroundStyle(.secondary)
     }
 }

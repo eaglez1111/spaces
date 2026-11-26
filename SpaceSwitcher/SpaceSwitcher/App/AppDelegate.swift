@@ -1,31 +1,62 @@
 import AppKit
 import KeyboardShortcuts
+import LaunchAtLogin
 
 extension KeyboardShortcuts.Name {
     static let toggleOverlay = Self("toggleOverlay", default: .init(.space, modifiers: .option))
-    // Ctrl+arrows are intercepted by macOS unless Mission Control bindings are disabled.
-    static let previousGroup = Self("previousGroup", default: .init(.leftArrow, modifiers: .control))
-    static let nextGroup = Self("nextGroup", default: .init(.rightArrow, modifiers: .control))
-    // Optional: assign Option+Tab from Settings to cycle groups without an overlay.
-    static let cycleGroup = Self("cycleGroup")
+    // These defaults match the Option-modified shortcuts shown in Settings.
+    static let previousGroup = Self("previousGroup", default: .init(.leftArrow, modifiers: .option))
+    static let nextGroup = Self("nextGroup", default: .init(.rightArrow, modifiers: .option))
+    static let cycleGroup = Self("cycleGroup", default: .init(.tab, modifiers: .option))
 }
 
 extension Notification.Name {
     static let showOverlay = Notification.Name("showOverlay")
     static let showSettings = Notification.Name("showSettings")
+    static let commandTabSettingChanged = Notification.Name("commandTabSettingChanged")
 }
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState = AppState()
     private var overlayManager: OverlayManager?
+    private var appGroupSwitcher: AppGroupSwitcherController?
+    private let commandTab = CommandTabInterceptor()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Also recovers the system switcher after a previous crash.
+        CommandTabInterceptor.restoreNativeSwitcher()
+
+        // Apply the login default only to brand-new installations; do not
+        // override a prior user's login-item choice during an app upgrade.
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: "didSetLaunchAtLoginDefault") == nil {
+            let wasPreviouslyConfigured = [
+                "gestureFollowEnabled", "followActivatedAppEnabled",
+                "replaceCommandTab", "dockLockEnabled"
+            ].contains { defaults.object(forKey: $0) != nil }
+            if !wasPreviouslyConfigured {
+                LaunchAtLogin.isEnabled = true
+            }
+            defaults.set(true, forKey: "didSetLaunchAtLoginDefault")
+        }
+
         // Prompt for accessibility access only if not already granted
         AccessibilityManager.checkAndPrompt()
 
         // Set up overlay manager
         overlayManager = OverlayManager(appState: appState)
+        appGroupSwitcher = AppGroupSwitcherController(appState: appState)
+        commandTab.onAction = { [weak self] action in
+            self?.appGroupSwitcher?.handle(action)
+        }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(configureCommandTab),
+            name: .commandTabSettingChanged,
+            object: nil
+        )
+        configureCommandTab()
 
         // Register global hotkey
         KeyboardShortcuts.onKeyUp(for: .toggleOverlay) { [weak self] in
@@ -118,8 +149,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // Safety rollback: never install the global keyboard interception tap.
+    // Preserve the implementation for a future isolated, tested redesign.
+    @objc private func configureCommandTab() {
+        commandTab.stop()
+        appState.commandTabStatus = "Temporarily disabled for stability"
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        commandTab.stop()  // Always restore native Cmd+Tab on a normal quit.
+    }
+
     @objc private func screensChanged() {
         appState.refreshMonitors()
         appState.detectActiveGroup()
+        appState.refreshDockLock()
     }
 }
