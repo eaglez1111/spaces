@@ -165,3 +165,29 @@ disconnected, the Dock is not at the bottom, or there is only one monitor.
 The Dock lock does **not** forcibly move a Dock that's already on the wrong
 screen; place it first, then enable the toggle. Source technique adapted
 from DockPin (MIT license, Copyright 2026 Meti Kadriu, see THIRD_PARTY_NOTICES.md).
+
+
+### Cmd+Tab: apps grouped by Space
+
+Settings → General → **Replace Cmd+Tab with apps grouped by Space** is an
+optional mode (off by default). The switcher shows one icon per application in
+each native Space group. Thus Chrome can appear once in Work and again in
+Personal even if it has several windows in either group. No window previews
+are rendered. Hold Command, tap Tab or Shift+Tab, and release Command to select.
+Escape cancels. Choosing an app switches the full monitor group first and
+then raises one of the app's windows within that group.
+
+This mode takes over the operating system's Cmd+Tab/Cmd+Shift+Tab symbolic
+hotkeys and uses a keyboard event tap; Accessibility permission is required.
+Turning off the setting or quitting Spaces normally restores the native
+switcher. Spaces also attempts to restore the native shortcuts on termination
+signals and on its next launch after a crash. A forced termination (SIGKILL)
+cannot run cleanup: relaunch Spaces to restore the shortcut.
+
+The visible list is based on normal windows, and uses read-only private SkyLight
+Space membership. Minimized, fullscreen-only, and protected windows may not
+appear. The existing Space-group overlay (Option+Space) and group shortcuts
+(Control+arrows) are unchanged.
+
+The two initial automatic groups now default to the existing **Work** (Taxi)
+and **Personal** (Sent-From-Computer) icons; extra groups are named Group N.

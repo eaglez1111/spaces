@@ -13,19 +13,36 @@ extension KeyboardShortcuts.Name {
 extension Notification.Name {
     static let showOverlay = Notification.Name("showOverlay")
     static let showSettings = Notification.Name("showSettings")
+    static let commandTabSettingChanged = Notification.Name("commandTabSettingChanged")
 }
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState = AppState()
     private var overlayManager: OverlayManager?
+    private var appGroupSwitcher: AppGroupSwitcherController?
+    private let commandTab = CommandTabInterceptor()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Also recovers the system switcher after a previous crash.
+        CommandTabInterceptor.restoreNativeSwitcher()
+
         // Prompt for accessibility access only if not already granted
         AccessibilityManager.checkAndPrompt()
 
         // Set up overlay manager
         overlayManager = OverlayManager(appState: appState)
+        appGroupSwitcher = AppGroupSwitcherController(appState: appState)
+        commandTab.onAction = { [weak self] action in
+            self?.appGroupSwitcher?.handle(action)
+        }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(configureCommandTab),
+            name: .commandTabSettingChanged,
+            object: nil
+        )
+        configureCommandTab()
 
         // Register global hotkey
         KeyboardShortcuts.onKeyUp(for: .toggleOverlay) { [weak self] in
@@ -116,6 +133,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             manager?.show()
         }
+    }
+
+    @objc private func configureCommandTab() {
+        commandTab.stop()
+        guard appState.replaceCommandTab else {
+            appState.commandTabStatus = "Native macOS switcher"
+            return
+        }
+        if commandTab.start() {
+            appState.commandTabStatus = "App icons grouped by Space"
+        } else {
+            appState.commandTabStatus = "Unavailable: check Accessibility permission"
+            appState.replaceCommandTab = false
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        commandTab.stop()  // Always restore native Cmd+Tab on a normal quit.
     }
 
     @objc private func screensChanged() {

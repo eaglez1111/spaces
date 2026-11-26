@@ -18,6 +18,15 @@ final class AppState {
         didSet { UserDefaults.standard.set(followActivatedAppEnabled, forKey: "followActivatedAppEnabled") }
     }
 
+    // Cmd+Tab takeover is off until the user explicitly enables it.
+    var replaceCommandTab: Bool = UserDefaults.standard.bool(forKey: "replaceCommandTab") {
+        didSet {
+            UserDefaults.standard.set(replaceCommandTab, forKey: "replaceCommandTab")
+            NotificationCenter.default.post(name: .commandTabSettingChanged, object: nil)
+        }
+    }
+    var commandTabStatus: String = "Native macOS switcher"
+
     // Dock lock is opt-in. An empty selection is initialized to the main display.
     var dockLockEnabled: Bool = UserDefaults.standard.bool(forKey: "dockLockEnabled") {
         didSet {
@@ -151,7 +160,9 @@ final class AppState {
 
         groups = positions.enumerated().map { groupIndex, indices in
             let id = groupIndex < existing.count ? existing[groupIndex].id : UUID()
-            var group = DesktopGroup(id: id, name: "Group \(groupIndex + 1)", icon: "Labtop")
+            let label = groupIndex == 0 ? "Work" : groupIndex == 1 ? "Personal" : "Group \(groupIndex + 1)"
+            let icon = groupIndex == 0 ? "Taxi" : groupIndex == 1 ? "Sent-From-Computer" : "Labtop"
+            var group = DesktopGroup(id: id, name: label, icon: icon)
             for (monitorIndex, spaceIndex) in indices.enumerated() {
                 if let spaceIndex {
                     group.setSpaceIndex(spaceIndex, on: monitors[monitorIndex])

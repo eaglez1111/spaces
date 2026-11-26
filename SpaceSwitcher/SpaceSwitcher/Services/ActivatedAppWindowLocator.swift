@@ -35,27 +35,33 @@ enum ActivatedAppWindowLocator {
         // If the app has several windows, we can't infer which one AltTab selected.
         guard windowIDs.count == 1 else { return nil }
 
-        // Construct an actual CFArray; Swift's [NSNumber] to CFArray cast isn't portable.
-        let windowID = NSNumber(value: windowIDs[0])
+        let spaces = spaceIDs(forWindowID: windowIDs[0])
+        return spaces.count == 1 ? spaces.first : nil
+    }
+
+    /// Return the window's native Space memberships, including windows on other desktops.
+    /// An empty result means unknown (not proof the window is on the active Space).
+    static func spaceIDs(forWindowID windowID: UInt32) -> Set<UInt64> {
+        guard let copySpacesForWindows else { return [] }
+        let number = NSNumber(value: windowID)
         var pointers: [UnsafeRawPointer?] = [
-            UnsafeRawPointer(Unmanaged.passUnretained(windowID).toOpaque())
+            UnsafeRawPointer(Unmanaged.passUnretained(number).toOpaque())
         ]
         var callbacks = kCFTypeArrayCallBacks
         guard let ids = pointers.withUnsafeMutableBufferPointer({ buffer in
             CFArrayCreate(kCFAllocatorDefault, buffer.baseAddress, buffer.count, &callbacks)
         }), let rawSpaces = copySpacesForWindows(CGSMainConnectionID(), 0x7, ids)?.takeRetainedValue()
-        else { return nil }
+        else { return [] }
 
-        var uniqueSpaceIDs = Set<UInt64>()
+        var unique = Set<UInt64>()
         for index in 0..<CFArrayGetCount(rawSpaces) {
             guard let pointer = CFArrayGetValueAtIndex(rawSpaces, index) else { continue }
-            let number = Unmanaged<CFNumber>.fromOpaque(pointer).takeUnretainedValue()
+            let value = Unmanaged<CFNumber>.fromOpaque(pointer).takeUnretainedValue()
             var rawID: Int64 = 0
-            if CFNumberGetValue(number, .sInt64Type, &rawID), rawID > 0 {
-                uniqueSpaceIDs.insert(UInt64(rawID))
+            if CFNumberGetValue(value, .sInt64Type, &rawID), rawID > 0 {
+                unique.insert(UInt64(rawID))
             }
         }
-        guard uniqueSpaceIDs.count == 1 else { return nil }
-        return uniqueSpaceIDs.first
+        return unique
     }
 }

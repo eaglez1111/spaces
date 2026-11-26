@@ -58,6 +58,11 @@ struct GeneralSettingsView: View {
         Form {
             HotkeySettingsView()
             LaunchAtLogin.Toggle("Launch at login")
+            Toggle("Replace Cmd+Tab with apps grouped by Space",
+                   isOn: Binding(get: { appState.replaceCommandTab },
+                                 set: { appState.replaceCommandTab = $0 }))
+            Text("Cmd+Tab: \(appState.commandTabStatus). Release Command to select; Esc cancels. Disable to restore macOS Cmd+Tab.")
+                .font(.caption).foregroundStyle(.secondary)
             Toggle("Switch the whole group when a Space changes on one display (e.g. three-finger swipe)",
                    isOn: Binding(get: { appState.followEnabled }, set: { appState.followEnabled = $0 }))
             Toggle("Follow activated apps with one window (AltTab / Cmd+Tab)",
