@@ -144,12 +144,12 @@ enum SpaceSwitcherService {
                 }
                 if systemShortcutEnabled(target.desktopNumber) == false {
                     logger.warning(
-                        "Switch to Desktop \\(target.desktopNumber) is disabled in Mission Control keyboard shortcuts"
+                        "Switch to Desktop \(target.desktopNumber) is disabled in Mission Control keyboard shortcuts"
                     )
                     continue
                 }
                 guard let mapping = KeyCodes.keyMapping(for: target.desktopNumber) else {
-                    logger.warning("Unsupported Desktop \\(target.desktopNumber) shortcut")
+                    logger.warning("Unsupported Desktop \(target.desktopNumber) shortcut")
                     continue
                 }
                 _ = postKeystroke(
@@ -171,7 +171,7 @@ enum SpaceSwitcherService {
         let final = getCurrentSpacePerDisplay()
         for target in targets where final[target.displayUUID] != target.spaceID {
             logger.warning(
-                "Display \\(target.displayUUID, privacy: .public) did not reach Desktop \\(target.desktopNumber)"
+                "Display \(target.displayUUID, privacy: .public) did not reach Desktop \(target.desktopNumber)"
             )
         }
     }
