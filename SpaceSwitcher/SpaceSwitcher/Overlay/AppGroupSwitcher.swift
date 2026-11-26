@@ -264,6 +264,9 @@ final class AppGroupSwitcherController {
     private var showGeneration = 0
     private var loading = false
     private var selectionGeneration = 0
+    // Cmd+Tab can be released before the background window scan completes.
+    private var queuedSteps: [Bool] = []
+    private var commitWhenReady = false
 
     init(appState: AppState) {
         self.appState = appState
@@ -274,6 +277,28 @@ final class AppGroupSwitcherController {
             step(reverse: false)
         } else if !loading {
             show()
+        }
+    }
+
+    func handle(_ action: CommandTabInterceptor.Action) {
+        switch action {
+        case .start(let reverse):
+            show()
+            queuedSteps.append(reverse) // native Cmd+Tab selects next/previous
+        case .advance(let reverse):
+            if loading {
+                queuedSteps.append(reverse)
+            } else {
+                step(reverse: reverse)
+            }
+        case .commit:
+            if loading {
+                commitWhenReady = true
+            } else {
+                commit()
+            }
+        case .cancel:
+            dismiss()
         }
     }
 
@@ -335,6 +360,18 @@ final class AppGroupSwitcherController {
         }
         window.makeKeyAndOrderFront(nil)
         panel = window
+
+        // Apply keys received while scanning. On a quick Cmd+Tab tap,
+        // complete the choice once the inventory arrives.
+        let steps = queuedSteps
+        queuedSteps.removeAll()
+        for reverse in steps { step(reverse: reverse) }
+        if commitWhenReady {
+            commitWhenReady = false
+            commit()
+            return
+        }
+
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.panel != nil else { return event }
             return self.handleKeyDown(event) ? nil : event
@@ -434,6 +471,8 @@ final class AppGroupSwitcherController {
     private func dismiss() {
         showGeneration += 1
         loading = false
+        queuedSteps.removeAll()
+        commitWhenReady = false
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)
             self.keyMonitor = nil

@@ -4,18 +4,12 @@ import Darwin
 
 // The system Dock consumes Cmd+Tab before ordinary global hotkey handlers see it.
 // The two native symbolic hotkeys are disabled ONLY while this event tap is active.
-// A regular app quit, SIGTERM, and the next launch all restore the native shortcut.
+// A regular app quit, graceful SIGTERM, and the next launch restore the native shortcut.
+// Do not call SkyLight from a POSIX signal handler.
 @_silgen_name("CGSSetSymbolicHotKeyEnabled")
 @discardableResult private func CGSSetSymbolicHotKeyEnabled(
     _ hotkey: Int32, _ enabled: Bool
 ) -> CGError
-
-private func restoreNativeSwitcherOnSignal(_ number: Int32) {
-    _ = CGSSetSymbolicHotKeyEnabled(1, true)
-    _ = CGSSetSymbolicHotKeyEnabled(2, true)
-    signal(number, SIG_DFL)
-    raise(number)
-}
 
 @MainActor
 final class CommandTabInterceptor {
@@ -81,9 +75,6 @@ final class CommandTabInterceptor {
             stop()
             return false
         }
-        signal(SIGTERM, restoreNativeSwitcherOnSignal)
-        signal(SIGINT, restoreNativeSwitcherOnSignal)
-        signal(SIGHUP, restoreNativeSwitcherOnSignal)
         return true
     }
 
@@ -158,9 +149,10 @@ final class CommandTabInterceptor {
                 notify(.commit)
             }
         default:
-            break
+            // Never intercept unrelated typing or shortcuts if the user
+            // keeps Command down. Pass unrecognized keys through unchanged.
+            return Unmanaged.passUnretained(event)
         }
-        // During the overlay, don't leak keys to the previously active app.
         return nil
     }
 }

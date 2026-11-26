@@ -14,6 +14,7 @@ extension KeyboardShortcuts.Name {
 extension Notification.Name {
     static let showOverlay = Notification.Name("showOverlay")
     static let showSettings = Notification.Name("showSettings")
+    static let commandTabSettingChanged = Notification.Name("commandTabSettingChanged")
 }
 
 @MainActor
@@ -21,8 +22,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState = AppState()
     private var overlayManager: OverlayManager?
     private var appGroupSwitcher: AppGroupSwitcherController?
+    private let commandTab = CommandTabInterceptor()
+    private var terminationSource: DispatchSourceSignal?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Restore native shortcuts even if a previous Spaces build crashed.
+        CommandTabInterceptor.restoreNativeSwitcher()
+        configureGracefulTermination()
         // Apply the login default only to brand-new installations; do not
         // override a prior user's login-item choice during an app upgrade.
         let defaults = UserDefaults.standard
@@ -37,12 +43,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defaults.set(true, forKey: "didSetLaunchAtLoginDefault")
         }
 
-        // Prompt for accessibility access only if not already granted
-        AccessibilityManager.checkAndPrompt()
+        // Read Accessibility status passively. The user can open its settings
+        // explicitly; never keep re-prompting from startup or Space hotkeys.
 
         // Set up overlay manager
         overlayManager = OverlayManager(appState: appState)
         appGroupSwitcher = AppGroupSwitcherController(appState: appState)
+        commandTab.onAction = { [weak self] action in
+            self?.appGroupSwitcher?.handle(action)
+        }
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(configureCommandTab),
+            name: .commandTabSettingChanged, object: nil
+        )
+        configureCommandTab()
         // Register global hotkey
         KeyboardShortcuts.onKeyUp(for: .toggleOverlay) { [weak self] in
             Task { @MainActor in
@@ -138,6 +152,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             manager?.show()
         }
+    }
+
+    /// Handles installer SIGTERM without running unsafe CoreGraphics work
+    /// from a POSIX signal handler, which could deadlock the window server.
+    private func configureGracefulTermination() {
+        signal(SIGTERM, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(
+            signal: SIGTERM, queue: .main
+        )
+        source.setEventHandler {
+            Task { @MainActor in
+                NSApp.terminate(nil) // applicationWillTerminate restores native Cmd+Tab
+            }
+        }
+        source.resume()
+        terminationSource = source
+    }
+
+    @objc private func configureCommandTab() {
+        commandTab.stop()
+        guard appState.replaceCommandTab else {
+            appState.commandTabStatus = "Native macOS Cmd+Tab"
+            return
+        }
+        guard AccessibilityManager.isTrusted else {
+            appState.commandTabStatus = "Accessibility not granted to this build"
+            return
+        }
+        appState.commandTabStatus = commandTab.start()
+            ? "Active — release Command to select, Escape to cancel"
+            : "Could not start keyboard interception; native Cmd+Tab restored"
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        commandTab.stop()
     }
 
     @objc private func screensChanged() {
