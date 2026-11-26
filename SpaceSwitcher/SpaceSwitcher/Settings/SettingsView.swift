@@ -67,10 +67,14 @@ struct GeneralSettingsView: View {
                 GroupBox("Startup and app switching") {
                     VStack(alignment: .leading, spacing: 9) {
                         LaunchAtLogin.Toggle("Launch at login")
-                        Toggle("Replace Cmd+Tab with apps grouped by Space",
-                               isOn: .constant(false))
-                            .disabled(true)
-                        Text("Cmd+Tab: \(appState.commandTabStatus). Native macOS switching is restored.")
+                        Toggle("Enable cross-Space app picker",
+                               isOn: Binding(get: { appState.appPickerEnabled },
+                                             set: { appState.appPickerEnabled = $0 }))
+                        Text("Option+Shift+Tab opens an app picker with one row per Space. Left/Right or Tab chooses an app; Up/Down changes rows; Return selects; Esc closes. Native Cmd+Tab is unchanged.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("Off by default for independent testing after the previous freeze.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -98,8 +102,8 @@ struct GeneralSettingsView: View {
                 GroupBox("Dock") {
                     VStack(alignment: .leading, spacing: 9) {
                         Toggle("Keep Dock at bottom of one monitor",
-                               isOn: .constant(false))
-                            .disabled(true)
+                               isOn: Binding(get: { appState.dockLockEnabled },
+                                             set: { appState.dockLockEnabled = $0 }))
                         Picker("Dock monitor", selection: Binding(
                             get: { appState.dockLockDisplayUUID },
                             set: { appState.dockLockDisplayUUID = $0 }
@@ -109,11 +113,10 @@ struct GeneralSettingsView: View {
                                     .tag(monitor.displayUUID)
                             }
                         }
-                        Text("Dock lock: \(appState.dockLockStatus). Input interception is paused after the reported system freeze.")
+                        Text("Dock lock: \(appState.dockLockStatus). Test separately after the app picker. Move the Dock to the selected monitor first; hold Option to bypass.")
                             .font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                         Button("Refresh Dock lock") { appState.refreshDockLock() }
-                            .disabled(true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(6)

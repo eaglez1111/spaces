@@ -17,12 +17,6 @@ final class DockEdgeGuard {
     @discardableResult
     func configure(enabled: Bool, selectedDisplayUUID: String) -> String {
         stop()
-        // Safety rollback: this session-wide pointer tap must not run until
-        // the full-system input freeze is understood and tested separately.
-        let suspendedForSafety = true
-        guard !suspendedForSafety else {
-            return "Temporarily disabled for stability"
-        }
         guard enabled else { return "Off" }
         let screens = NSScreen.screens
         guard screens.count > 1 else { return "Only one monitor connected" }
@@ -54,13 +48,13 @@ final class DockEdgeGuard {
             let controller = Unmanaged<DockEdgeGuard>.fromOpaque(rawContext).takeUnretainedValue()
 
             if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                if let tap = controller.tap { CGEvent.tapEnable(tap: tap, enable: true) }
+                // Fail open, rather than repeatedly enabling a misbehaving tap.
+                if let tap = controller.tap { CGEvent.tapEnable(tap: tap, enable: false) }
                 return Unmanaged.passUnretained(event)
             }
 
             // Bypass when Option is held, so the Dock can still be moved deliberately.
-            let modifiers = event.flags.union(CGEventSource.flagsState(.combinedSessionState))
-            if modifiers.contains(.maskAlternate) { return Unmanaged.passUnretained(event) }
+            if event.flags.contains(.maskAlternate) { return Unmanaged.passUnretained(event) }
 
             let point = event.location
             for zone in controller.zones where zone.area.contains(point) {

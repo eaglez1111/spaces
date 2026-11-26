@@ -8,12 +8,12 @@ extension KeyboardShortcuts.Name {
     static let previousGroup = Self("previousGroup", default: .init(.leftArrow, modifiers: .option))
     static let nextGroup = Self("nextGroup", default: .init(.rightArrow, modifiers: .option))
     static let cycleGroup = Self("cycleGroup", default: .init(.tab, modifiers: .option))
+    static let appPicker = Self("appPicker", default: .init(.tab, modifiers: [.option, .shift]))
 }
 
 extension Notification.Name {
     static let showOverlay = Notification.Name("showOverlay")
     static let showSettings = Notification.Name("showSettings")
-    static let commandTabSettingChanged = Notification.Name("commandTabSettingChanged")
 }
 
 @MainActor
@@ -21,12 +21,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState = AppState()
     private var overlayManager: OverlayManager?
     private var appGroupSwitcher: AppGroupSwitcherController?
-    private let commandTab = CommandTabInterceptor()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Also recovers the system switcher after a previous crash.
-        CommandTabInterceptor.restoreNativeSwitcher()
-
         // Apply the login default only to brand-new installations; do not
         // override a prior user's login-item choice during an app upgrade.
         let defaults = UserDefaults.standard
@@ -47,17 +43,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Set up overlay manager
         overlayManager = OverlayManager(appState: appState)
         appGroupSwitcher = AppGroupSwitcherController(appState: appState)
-        commandTab.onAction = { [weak self] action in
-            self?.appGroupSwitcher?.handle(action)
-        }
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(configureCommandTab),
-            name: .commandTabSettingChanged,
-            object: nil
-        )
-        configureCommandTab()
-
         // Register global hotkey
         KeyboardShortcuts.onKeyUp(for: .toggleOverlay) { [weak self] in
             Task { @MainActor in
@@ -74,6 +59,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         KeyboardShortcuts.onKeyUp(for: .cycleGroup) { [weak self] in
             Task { @MainActor in self?.appState.cycleGroup(by: 1) }
+        }
+        KeyboardShortcuts.onKeyUp(for: .appPicker) { [weak self] in
+            Task { @MainActor in
+                guard let self, self.appState.appPickerEnabled else { return }
+                self.appGroupSwitcher?.openOrAdvance()
+            }
         }
 
         // Listen for "Show Switcher" from menu bar
@@ -147,17 +138,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             manager?.show()
         }
-    }
-
-    // Safety rollback: never install the global keyboard interception tap.
-    // Preserve the implementation for a future isolated, tested redesign.
-    @objc private func configureCommandTab() {
-        commandTab.stop()
-        appState.commandTabStatus = "Temporarily disabled for stability"
-    }
-
-    func applicationWillTerminate(_ notification: Notification) {
-        commandTab.stop()  // Always restore native Cmd+Tab on a normal quit.
     }
 
     @objc private func screensChanged() {

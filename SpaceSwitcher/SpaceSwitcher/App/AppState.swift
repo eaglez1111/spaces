@@ -18,19 +18,17 @@ final class AppState {
         didSet { UserDefaults.standard.set(followActivatedAppEnabled, forKey: "followActivatedAppEnabled") }
     }
 
-    // Enabled on new installs; existing user choices remain persisted.
-    var replaceCommandTab: Bool = (UserDefaults.standard.object(forKey: "replaceCommandTab") as? Bool) ?? true {
+    // Explicit opt-in after prior freezes. Never replaces native Cmd+Tab.
+    var appPickerEnabled: Bool = UserDefaults.standard.bool(forKey: "safeAppPickerEnabled") {
         didSet {
-            UserDefaults.standard.set(replaceCommandTab, forKey: "replaceCommandTab")
-            NotificationCenter.default.post(name: .commandTabSettingChanged, object: nil)
+            UserDefaults.standard.set(appPickerEnabled, forKey: "safeAppPickerEnabled")
         }
     }
-    var commandTabStatus: String = "Native macOS switcher"
 
     // Enabled on new installs; an unset monitor defaults to the middle screen.
-    var dockLockEnabled: Bool = (UserDefaults.standard.object(forKey: "dockLockEnabled") as? Bool) ?? true {
+    var dockLockEnabled: Bool = UserDefaults.standard.bool(forKey: "safeDockLockEnabled") {
         didSet {
-            UserDefaults.standard.set(dockLockEnabled, forKey: "dockLockEnabled")
+            UserDefaults.standard.set(dockLockEnabled, forKey: "safeDockLockEnabled")
             refreshDockLock()
         }
     }

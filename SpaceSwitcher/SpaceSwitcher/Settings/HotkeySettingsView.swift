@@ -20,7 +20,11 @@ struct HotkeySettingsView: View {
                 Text("Cycle groups").frame(width: 150, alignment: .leading)
                 KeyboardShortcuts.Recorder(for: .cycleGroup)
             }
-            Text("Defaults: Option+Space, Option+Left/Right, Option+Tab.")
+            HStack {
+                Text("App picker").frame(width: 150, alignment: .leading)
+                KeyboardShortcuts.Recorder(for: .appPicker)
+            }
+            Text("Defaults: Option+Space, Option+Left/Right, Option+Tab; app picker: Option+Shift+Tab.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

@@ -2,13 +2,13 @@ import Foundation
 
 /// One entry per application, within each synchronized Space group.
 /// Windows on several Spaces may appear in several groups, but never twice in one.
-struct AppGroupWindow: Equatable {
+struct AppGroupWindow: Equatable, Sendable {
     let pid: Int32
     let windowID: UInt32
     let spaceIDs: Set<UInt64>
 }
 
-struct AppGroupChoice: Equatable {
+struct AppGroupChoice: Equatable, Sendable {
     let groupIndex: Int
     let pid: Int32
     let windowID: UInt32
